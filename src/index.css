@@ -5,6 +5,12 @@
   --font-mono: 'Roboto', sans-serif;
 }
 
+#root {
+  display: flex;
+  justify-content: space-between;
+  
+}
+
 :root {
   --text: #6b6375;
   --text-h: #08060d;
