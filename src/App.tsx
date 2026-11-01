@@ -1,12 +1,12 @@
 import NavBar from "./components/NavBar.tsx";
-import MainContent from "./components/MainContent.tsx";
 import Footer from "./components/Footer.tsx";
+import { Outlet } from "react-router";
 
 function App() {
 	return (
 		<>
 			<NavBar />
-			<MainContent />
+			<Outlet />
       <Footer />
 		</>
 	);

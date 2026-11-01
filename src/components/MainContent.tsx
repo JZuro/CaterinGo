@@ -1,10 +1,11 @@
+
 function MainContent() {
 	return (
-		<section>
+		<main>
 			<div>
-				<p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Laudantium, culpa quae labore sint nam natus. Asperiores incidunt in excepturi qui itaque corporis labore quasi possimus, vero eveniet, quaerat tempora iste!</p>
+				Lorem ipsum dolor sit amet consectetur adipisicing elit. Quo maiores ut eveniet. Provident nobis id placeat porro? Quaerat voluptates blanditiis quod accusamus, doloremque distinctio inventore praesentium sunt a iste ipsum.
 			</div>
-		</section>
+		</main>
 	);
 }
 

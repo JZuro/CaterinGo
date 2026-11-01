@@ -1,7 +1,9 @@
+import { Link } from "react-router";
+
 function NavBar() {
 	return (
 		<header className="flex flex-row items-center justify-between w-full">
-			<div className="flex flex-row items-center justify-start gap-3 px-5 py-6 sm:px-8 font-bold text-xl tracking-wide">
+			<Link to="/" className="flex flex-row items-center justify-start gap-3 px-5 py-6 sm:px-8 font-bold text-xl tracking-wide">
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
 					width="50"
@@ -32,12 +34,11 @@ function NavBar() {
 					/>
 				</svg>
 				<div>CaterinGo</div>
-			</div>
+			</Link>
 			<nav className="flex gap-30 px-30">
-				<button>Orders</button>
-				<button>Orders</button>
-				<button>Orders</button>
-
+				<Link to="/addresses">Addresses</Link>
+				<Link to="/orders">Orders</Link>
+				<Link to="/routes">Routes</Link>
 			</nav>
 		</header>
 	);
