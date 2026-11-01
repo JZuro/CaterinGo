@@ -1,15 +1,19 @@
+import { useState } from "react";
 import { Link } from "react-router";
 
 function NavBar() {
+	const [menuOpen, setMenuOpen] = useState(false);
+
 	return (
-		<header className="flex flex-row items-center justify-between w-full">
-			<Link to="/" className="flex flex-row items-center justify-start gap-3 px-5 py-6 sm:px-8 font-bold text-xl tracking-wide">
+		<header className="flex w-full flex-wrap items-center justify-between gap-3 px-5 py-4 sm:px-8">
+			<Link to="/" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 rounded font-bold text-xl tracking-wide focus-visible:outline-2 focus-visible:outline-offset-4">
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
 					width="50"
 					height="50"
 					viewBox="0 0 48 48"
-					className="-scale-y-100 stroke-white"
+					className="size-10 shrink-0 -scale-y-100 stroke-white sm:size-[50px]"
+					aria-hidden="true"
 				>
 					<path
 						fill="none"
@@ -35,10 +39,24 @@ function NavBar() {
 				</svg>
 				<div>CaterinGo</div>
 			</Link>
-			<nav className="flex gap-30 px-30">
-				<Link to="/addresses">Addresses</Link>
-				<Link to="/orders">Orders</Link>
-				<Link to="/routes">Routes</Link>
+			<button
+				type="button"
+				className="size-11 text-2xl md:hidden"
+				aria-label="Toggle menu"
+				aria-expanded={menuOpen}
+				aria-controls="primary-navigation"
+				onClick={() => setMenuOpen(!menuOpen)}
+			>
+				<span aria-hidden="true">{menuOpen ? "✕" : "☰"}</span>
+			</button>
+			<nav
+				id="primary-navigation"
+				aria-label="Main navigation"
+				className={`${menuOpen ? "flex" : "hidden"} w-full flex-col gap-4 py-3 md:flex md:w-auto md:flex-row md:gap-8`}
+			>
+				<Link to="/addresses" onClick={() => setMenuOpen(false)}>Addresses</Link>
+				<Link to="/orders" onClick={() => setMenuOpen(false)}>Orders</Link>
+				<Link to="/routes" onClick={() => setMenuOpen(false)}>Routes</Link>
 			</nav>
 		</header>
 	);
