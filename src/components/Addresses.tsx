@@ -38,9 +38,7 @@ const Addresses = () => {
 						</thead>
 						<tbody>
 							{addresses.map((address) => (
-								<tr
-									key={`${address.street}-${address.postalCode}`}
-								>
+								<tr key={address.id}>
 									<td>{address.street}</td>
 									<td>{address.apartment}</td>
 									<td>{address.city}</td>
