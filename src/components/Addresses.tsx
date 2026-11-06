@@ -32,7 +32,10 @@ const Addresses = () => {
 						<thead>
 							<tr>
 								<th>Street address</th>
-								<th>Apartment</th>
+								<th>
+									<span className="sm:hidden">Apt.</span>
+									<span className="hidden sm:inline">Apartment</span>
+								</th>
 								<th>City</th>
 								<th>Postal code</th>
 								<th>Actions</th>
