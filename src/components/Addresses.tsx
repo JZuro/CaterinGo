@@ -33,7 +33,7 @@ const Addresses = () => {
 								</th>
 								<th>City</th>
 								<th>Postal code</th>
-								<th>Actions</th>
+								<th className="text-center">Actions</th>
 							</tr>
 						</thead>
 						<tbody>

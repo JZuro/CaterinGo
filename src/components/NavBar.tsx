@@ -55,6 +55,7 @@ function NavBar() {
 				className={`${menuOpen ? "flex" : "hidden"} w-full flex-col gap-4 py-3 md:flex md:w-auto md:flex-row md:gap-8`}
 			>
 				<Link to="/addresses" onClick={() => setMenuOpen(false)}>Addresses</Link>
+				<Link to="/meals" onClick={() => setMenuOpen(false)}>Meals</Link>
 				<Link to="/orders" onClick={() => setMenuOpen(false)}>Orders</Link>
 				<Link to="/routes" onClick={() => setMenuOpen(false)}>Routes</Link>
 			</nav>

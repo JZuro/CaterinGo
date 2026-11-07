@@ -6,6 +6,7 @@ import Addresses from './components/Addresses.tsx'
 import MainContent from './components/MainContent.tsx';
 import Orders from './components/Orders.tsx'
 import Routes from './components/Routes.tsx'
+import Meals from './components/Meals.tsx'
 import { createBrowserRouter, RouterProvider } from "react-router";
 
 const router = createBrowserRouter([
@@ -17,6 +18,7 @@ const router = createBrowserRouter([
 			{ path: "addresses", element: <Addresses /> },
 			{ path: "orders", element: <Orders /> },
 			{ path: "routes", element: <Routes /> },
+			{ path: "meals", element: <Meals /> },
 		],
 	},
 ]);

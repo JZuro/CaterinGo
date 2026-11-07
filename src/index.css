@@ -111,3 +111,13 @@ h2 {
 p {
   margin: 0;
 }
+
+td {
+  text-indent:;
+}
+
+
+
+td:has(button) {
+  text-align: center;
+}
