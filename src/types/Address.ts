@@ -5,4 +5,3 @@ export type Address = {
 	city: string;
 	postalCode: string;
 };
-
