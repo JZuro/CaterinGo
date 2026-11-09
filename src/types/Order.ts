@@ -1,4 +1,4 @@
-export type OrderStatus = "pending" | "confirmed" | "delivered" | "cancelled";
+export type OrderStatus = "pending" | "delivered" | "cancelled";
 
 export type OrderItem = {
 	meal: {

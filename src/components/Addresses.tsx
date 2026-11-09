@@ -20,7 +20,7 @@ const Addresses = () => {
 	return (
 		<>
 			<div className="border-base-content/25 w-full rounded-lg border">
-				<div className="overflow-x-auto">
+				<div className="overflow-auto">
 					<table className="table">
 						<thead>
 							<tr>
