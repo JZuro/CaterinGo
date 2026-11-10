@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+#django backend
+server/.venv/
+server/db.sqlite3
+server/.env
