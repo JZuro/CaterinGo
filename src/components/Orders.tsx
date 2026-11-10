@@ -4,7 +4,6 @@ import type { Order, OrderStatus } from "../types/Order";
 
 const statusClasses: Record<OrderStatus, string> = {
 	pending: "badge-warning",
-	confirmed: "badge-info",
 	delivered: "badge-success",
 	cancelled: "badge-error",
 };
@@ -52,8 +51,8 @@ const Orders = () => {
 	}
 
 	return (
-		<div className="border-base-content/25 w-full rounded-lg border">
-			<div className="overflow-x-auto">
+		<div className="border-base-content/25 h-full w-full min-w-0 max-w-full overflow-hidden border-b">
+			<div className="table-scroll">
 				<table className="table">
 					<thead>
 						<tr>

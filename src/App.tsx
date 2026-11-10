@@ -6,10 +6,10 @@ function App() {
 	return (
 		<>
 			<NavBar />
-			<main>
-        <Outlet />
-      </main>
-      <Footer />
+			<main className="relative isolate min-h-0 w-full min-w-0 flex-1 overflow-auto">
+				<Outlet />
+			</main>
+			<Footer />
 		</>
 	);
 }

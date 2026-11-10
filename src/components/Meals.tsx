@@ -1,4 +1,3 @@
-import { Link } from "react-router";
 import { useEffect, useState } from "react";
 import { getMeals } from "../api/meals";
 import type { Meal } from "../types/Meal";
@@ -19,8 +18,8 @@ const Addresses = () => {
 
 	return (
 		<>
-			<div className="border-base-content/25 w-full rounded-lg border">
-				<div className="overflow-x-auto">
+			<div className="border-base-content/25 h-full w-full min-w-0 max-w-full overflow-hidden border-b">
+				<div className="table-scroll">
 					<table className="table">
 						<thead>
 							<tr>
@@ -32,7 +31,7 @@ const Addresses = () => {
 							{addresses.map((meal) => (
 								<tr key={meal.id}>
 									<td>{meal.name}</td>
-									<td>
+									<td className="whitespace-nowrap">
 										<button
 											className="btn btn-circle btn-text btn-sm"
 											aria-label={`Edit ${meal.name}`}
@@ -58,7 +57,6 @@ const Addresses = () => {
 					</table>
 				</div>
 			</div>
-			<Link to="/">Click here to go back</Link>
 		</>
 	);
 };

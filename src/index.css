@@ -2,17 +2,11 @@
 @plugin "@iconify/tailwind4";
 @plugin "flyonui";
 @import "flyonui/variants.css";
-@source "./node_modules/flyonui/flyonui.js"; 
+@source "./node_modules/flyonui/flyonui.js";
 
 @theme {
   --font-sans: 'Roboto', sans-serif;
   --font-mono: 'Roboto', sans-serif;
-}
-
-#root {
-  display: flex;
-  justify-content: space-between;
-
 }
 
 :root {
@@ -68,12 +62,11 @@
 }
 
 #root {
-  width: 1126px;
-  max-width: 100%;
+  width: min(1126px, 100%);
   margin: 0 auto;
   text-align: center;
   border-inline: 1px solid var(--border);
-  min-height: 100svh;
+  height: 100svh;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -81,6 +74,8 @@
 
 body {
   margin: 0;
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 h1,
@@ -112,12 +107,28 @@ p {
   margin: 0;
 }
 
-td {
-  text-indent:;
-}
-
-
-
 td:has(button) {
   text-align: center;
+}
+
+.table-scroll {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.table-scroll .table {
+  width: 100%;
+  min-width: max-content;
+}
+
+.table-scroll th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--bg);
+  box-shadow: 0 1px 0 var(--border);
 }

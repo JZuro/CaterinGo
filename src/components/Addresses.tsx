@@ -1,4 +1,3 @@
-import { Link } from "react-router";
 import { useEffect, useState } from "react";
 import { getAddresses } from "../api/addresses";
 import type { Address } from "../types/Address";
@@ -19,8 +18,8 @@ const Addresses = () => {
 
 	return (
 		<>
-			<div className="border-base-content/25 w-full rounded-lg border">
-				<div className="overflow-auto">
+			<div className="border-base-content/25 h-full w-full min-w-0 max-w-full overflow-hidden border-b">
+				<div className="table-scroll">
 					<table className="table">
 						<thead>
 							<tr>
@@ -43,7 +42,7 @@ const Addresses = () => {
 									<td>{address.apartment}</td>
 									<td>{address.city}</td>
 									<td>{address.postalCode}</td>
-									<td>
+									<td className="whitespace-nowrap">
 										<button
 											className="btn btn-circle btn-text btn-sm"
 											aria-label={`Edit ${address.street}`}
@@ -69,7 +68,6 @@ const Addresses = () => {
 					</table>
 				</div>
 			</div>
-			<Link to="/">Click here to go back</Link>
 		</>
 	);
 };

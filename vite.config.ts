@@ -5,5 +5,9 @@ import { msw } from "msw/vite";
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss(), msw()],
-})
+	plugins: [react(), tailwindcss(), msw()],
+	server: {
+		host: true,
+		allowedHosts: ["rygyfygy.tail4fc702.ts.net"],
+	},
+});
