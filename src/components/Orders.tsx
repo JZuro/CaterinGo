@@ -103,7 +103,7 @@ const Orders = () => {
 										<button
 											type="button"
 											className="btn btn-circle btn-text btn-sm"
-											aria-label={`Edit order ${order.id}`}
+											aria-label="Edit"
 										>
 											<span className="icon-[tabler--pencil] size-5" />
 										</button>
@@ -111,7 +111,7 @@ const Orders = () => {
 										<button
 											type="button"
 											className="btn btn-circle btn-text btn-sm"
-											aria-label={`Delete order ${order.id}`}
+											aria-label="Delete"
 										>
 											<span className="icon-[tabler--trash] size-5" />
 										</button>
@@ -119,7 +119,7 @@ const Orders = () => {
 										<button
 											type="button"
 											className="btn btn-circle btn-text btn-sm"
-											aria-label={`More actions for order ${order.id}`}
+											aria-label="More"
 										>
 											<span className="icon-[tabler--dots-vertical] size-5" />
 										</button>

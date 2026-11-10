@@ -34,19 +34,19 @@ const Addresses = () => {
 									<td className="whitespace-nowrap">
 										<button
 											className="btn btn-circle btn-text btn-sm"
-											aria-label={`Edit ${meal.name}`}
+											aria-label="Edit"
 										>
 											<span className="icon-[tabler--pencil] size-5"></span>
 										</button>
 										<button
 											className="btn btn-circle btn-text btn-sm"
-											aria-label={`Delete ${meal.name}`}
+											aria-label="Delete"
 										>
 											<span className="icon-[tabler--trash] size-5"></span>
 										</button>
 										<button
 											className="btn btn-circle btn-text btn-sm"
-											aria-label={`More actions for ${meal.name}`}
+											aria-label="More"
 										>
 											<span className="icon-[tabler--dots-vertical] size-5"></span>
 										</button>

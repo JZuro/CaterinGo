@@ -47,7 +47,7 @@ function NavBar() {
 				<button
 					type="button"
 					className="size-11 text-2xl md:hidden"
-					aria-label="Toggle menu"
+					aria-label="Menu"
 					aria-expanded={menuOpen}
 					aria-controls="primary-navigation"
 					onClick={() => setMenuOpen(!menuOpen)}
@@ -56,7 +56,6 @@ function NavBar() {
 				</button>
 				<nav
 					id="primary-navigation"
-					aria-label="Main navigation"
 					className={`${menuOpen ? "flex" : "hidden"} w-full flex-col gap-4 py-3 md:flex md:w-auto md:flex-row md:gap-8`}
 				>
 					<Link to="/addresses" onClick={() => setMenuOpen(false)}>
