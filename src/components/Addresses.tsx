@@ -32,7 +32,7 @@ const Addresses = () => {
 								</th>
 								<th>City</th>
 								<th>Postal code</th>
-								<th className="text-center">Actions</th>
+								<th className="actions-column">Actions</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -42,7 +42,7 @@ const Addresses = () => {
 									<td>{address.apartment}</td>
 									<td>{address.city}</td>
 									<td>{address.postalCode}</td>
-									<td className="whitespace-nowrap">
+									<td className="actions-column">
 										<button
 											className="btn btn-circle btn-text btn-sm"
 											aria-label="Edit"

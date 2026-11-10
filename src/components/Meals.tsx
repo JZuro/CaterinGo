@@ -24,14 +24,14 @@ const Addresses = () => {
 						<thead>
 							<tr>
 								<th>Name</th>
-								<th className="text-center">Actions</th>
+								<th className="actions-column">Actions</th>
 							</tr>
 						</thead>
 						<tbody>
 							{addresses.map((meal) => (
 								<tr key={meal.id}>
 									<td>{meal.name}</td>
-									<td className="whitespace-nowrap">
+									<td className="actions-column">
 										<button
 											className="btn btn-circle btn-text btn-sm"
 											aria-label="Edit"

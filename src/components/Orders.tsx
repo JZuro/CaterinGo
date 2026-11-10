@@ -59,7 +59,7 @@ const Orders = () => {
 							<th>Street</th>
 							<th>Status</th>
 							<th>Meals</th>
-							<th className="text-center">Actions</th>
+							<th className="actions-column">Actions</th>
 						</tr>
 					</thead>
 
@@ -99,7 +99,7 @@ const Orders = () => {
 										</div>
 									</td>
 
-									<td className="whitespace-nowrap">
+									<td className="actions-column">
 										<button
 											type="button"
 											className="btn btn-circle btn-text btn-sm"

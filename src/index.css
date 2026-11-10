@@ -107,8 +107,11 @@ p {
   margin: 0;
 }
 
-td:has(button) {
+.actions-column {
+  width: 9rem;
+  min-width: 9rem;
   text-align: center;
+  white-space: nowrap;
 }
 
 .table-scroll {
