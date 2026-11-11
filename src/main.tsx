@@ -7,6 +7,7 @@ import MainContent from './components/MainContent.tsx';
 import Orders from './components/Orders.tsx'
 import Routes from './components/Routes.tsx'
 import Meals from './components/Meals.tsx'
+import { ConfirmProvider } from './components/ConfirmDialog.tsx'
 import { createBrowserRouter, RouterProvider } from "react-router";
 
 const router = createBrowserRouter([
@@ -34,6 +35,8 @@ if (import.meta.env.DEV && import.meta.env.VITE_USE_MOCKS === "true") {
 
 createRoot(document.getElementById("root")!).render(
 	<StrictMode>
-		<RouterProvider router={router} />
+		<ConfirmProvider>
+			<RouterProvider router={router} />
+		</ConfirmProvider>
 	</StrictMode>
 );

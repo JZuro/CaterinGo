@@ -1,7 +1,13 @@
 import { useEffect, useState } from "react";
-import { createAddress, getAddresses, updateAddress } from "../api/addresses";
+import {
+	createAddress,
+	deleteAddress,
+	getAddresses,
+	updateAddress,
+} from "../api/addresses";
 import type { Address, AddressInput } from "../types/Address";
 import AddressForm from "./AddressForm";
+import { useConfirm } from "./ConfirmContext";
 
 type AddressFormState =
 	| { mode: "create" }
@@ -15,11 +21,22 @@ const toAddressInput = (address: Address): AddressInput => ({
 	postal_code: address.postal_code,
 });
 
+const formatAddress = (address: Address) => {
+	const street = address.apartment
+		? `${address.street} ${address.apartment}`
+		: address.street;
+
+	return `${street}, ${address.postal_code} ${address.city}`;
+};
+
 const Addresses = () => {
+	const confirm = useConfirm();
 	const [addresses, setAddresses] = useState<Address[]>([]);
 	const [error, setError] = useState("");
 	const [formState, setFormState] = useState<AddressFormState>(null);
 	const [searchQuery, setSearchQuery] = useState("");
+	const [actionError, setActionError] = useState("");
+	const [deletingId, setDeletingId] = useState<number | null>(null);
 
 	useEffect(() => {
 		getAddresses()
@@ -32,6 +49,39 @@ const Addresses = () => {
 
 		setAddresses((current) => [...current, createdAddress]);
 		setFormState(null);
+	};
+
+	const handleDelete = async (address: Address) => {
+		const confirmed = await confirm({
+			title: "Delete address?",
+			message: `Are you sure you want to delete: ${formatAddress(address)} and its orders?`,
+			confirmLabel: "Delete",
+			danger: true,
+		});
+
+		if (!confirmed) {
+			return;
+		}
+
+		setActionError("");
+		setDeletingId(address.id);
+
+		try {
+			await deleteAddress(address.id);
+
+			setAddresses((current) =>
+				current.filter((item) => item.id !== address.id)
+			);
+			setFormState((current) =>
+				current?.mode === "edit" && current.address.id === address.id
+					? null
+					: current
+			);
+		} catch {
+			setActionError("Could not delete address and its orders");
+		} finally {
+			setDeletingId(null);
+		}
 	};
 
 	const handleUpdate = async (values: AddressInput) => {
@@ -87,6 +137,12 @@ const Addresses = () => {
 					+
 				</button>
 			</div>
+
+			{actionError && (
+				<p className="text-error shrink-0 px-4 py-2 text-left">
+					{actionError}
+				</p>
+			)}
 
 			{formState && (
 				<section className="border-base-content/25 shrink-0 border-b p-4">
@@ -168,6 +224,8 @@ const Addresses = () => {
 											type="button"
 											className="btn btn-circle btn-text btn-sm"
 											aria-label="Delete"
+											onClick={() => void handleDelete(address)}
+											disabled={deletingId === address.id}
 										>
 											<span className="icon-[tabler--trash] size-5" />
 										</button>
