@@ -13,8 +13,10 @@ class AddressSerializer(serializers.ModelSerializer):
             "apartment",
             "city",
             "postal_code",
+            "latitude",
+            "longitude",
         )
-        read_only_fields = ("id",)
+        read_only_fields = ("id", "latitude", "longitude")
 
 
 class MealSerializer(serializers.ModelSerializer):

@@ -28,6 +28,8 @@ class AddressAPITests(APITestCase):
                     "apartment": "4B",
                     "city": "Ostrów Świętokrzyski",
                     "postal_code": "27-530",
+                    "latitude": None,
+                    "longitude": None,
                 }
             ],
         )
@@ -231,6 +233,8 @@ class OrderAPITests(APITestCase):
                         "apartment": "7",
                         "city": "Gdynia",
                         "postal_code": "81-368",
+                        "latitude": None,
+                        "longitude": None,
                     },
                     "items": [
                         {
