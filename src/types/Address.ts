@@ -5,3 +5,5 @@ export type Address = {
 	city: string;
 	postal_code: string;
 };
+
+export type AddressInput = Omit<Address, "id">;
