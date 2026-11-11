@@ -19,6 +19,7 @@ const Addresses = () => {
 	const [addresses, setAddresses] = useState<Address[]>([]);
 	const [error, setError] = useState("");
 	const [formState, setFormState] = useState<AddressFormState>(null);
+	const [searchQuery, setSearchQuery] = useState("");
 
 	useEffect(() => {
 		getAddresses()
@@ -52,16 +53,35 @@ const Addresses = () => {
 		setFormState(null);
 	};
 
+	const normalizedSearch = searchQuery.trim().toLowerCase();
+	const filteredAddresses = normalizedSearch
+		? addresses.filter((address) =>
+				[
+					address.street,
+					address.apartment,
+					address.city,
+					address.postal_code,
+				].some((value) => value.toLowerCase().includes(normalizedSearch))
+			)
+		: addresses;
+
 	if (error) {
 		return <p>{error}</p>;
 	}
 
 	return (
 		<div className="flex h-full min-h-0 w-full flex-col">
-			<div className="border-base-content/25 flex shrink-0 justify-end border-b">
+			<div className="border-base-content/25 flex shrink-0 justify-end gap-2 border-b p-2">
+				<input
+					type="search"
+					className="input input-sm w-full max-w-xs"
+					placeholder="Search addresses"
+					value={searchQuery}
+					onChange={(event) => setSearchQuery(event.target.value)}
+				/>
 				<button
 					type="button"
-					className="btn btn-primary"
+					className="btn btn-primary btn-sm"
 					onClick={() => setFormState({ mode: "create" })}
 				>
 					+
@@ -123,7 +143,7 @@ const Addresses = () => {
 						</thead>
 
 						<tbody>
-							{addresses.map((address) => (
+							{filteredAddresses.map((address) => (
 								<tr key={address.id}>
 									<td>{address.street}</td>
 									<td>{address.apartment}</td>
@@ -162,6 +182,16 @@ const Addresses = () => {
 									</td>
 								</tr>
 							))}
+
+							{filteredAddresses.length === 0 && (
+								<tr>
+									<td colSpan={5} className="text-center">
+										{normalizedSearch
+											? "No matching addresses"
+											: "No addresses yet"}
+									</td>
+								</tr>
+							)}
 						</tbody>
 					</table>
 				</div>
