@@ -8,7 +8,8 @@ export default defineConfig({
 	plugins: [react(), tailwindcss(), msw()],
 	server: {
 		host: true,
-		allowedHosts: ["rygyfygy.tail4fc702.ts.net"],
+		port: 5173,
+		strictPort: true,
 		proxy: {
 			"/api": {
 				target: "http://127.0.0.1:8000",
