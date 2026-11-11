@@ -55,7 +55,7 @@ function Footer() {
 				</div>
 				<div>
 					<p className="px-5 text-right text-[10px] sm:px-20">
-						©2026 JZuro · Geocoding ©{" "}
+						©2026 JZuro · Data ©{" "}
 						<a
 							href="https://www.openstreetmap.org/copyright"
 							target="_blank"

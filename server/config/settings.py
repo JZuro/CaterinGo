@@ -41,6 +41,16 @@ NOMINATIM_COUNTRY_CODES = os.getenv("NOMINATIM_COUNTRY_CODES", "pl")
 NOMINATIM_TIMEOUT = 5
 NOMINATIM_CACHE_TIMEOUT = 60 * 60 * 24 * 30
 
+# The public default is a non-commercial demo service with no uptime guarantee.
+# Use a self-hosted or contracted OSRM endpoint for production.
+OSRM_BASE_URL = os.getenv("OSRM_BASE_URL", "https://router.project-osrm.org")
+OSRM_PROFILE = os.getenv("OSRM_PROFILE", "driving")
+OSRM_USER_AGENT = os.getenv("OSRM_USER_AGENT", "CaterinGo/1.0")
+OSRM_TIMEOUT = 10
+OSRM_CACHE_TIMEOUT = 60 * 60 * 24
+OSRM_MAX_COORDINATES = 25
+ROUTE_EXACT_STOP_LIMIT = 8
+
 
 # Application definition
 

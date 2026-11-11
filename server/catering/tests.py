@@ -10,6 +10,12 @@ from rest_framework.test import APITestCase
 
 from .models import Address, Meal, Order, OrderItem, Route
 from .services.geocoding import Coordinates, geocode_address
+from .services.routing import (
+    Coordinate,
+    RoadMatrix,
+    RoutingProviderError,
+    get_road_matrix,
+)
 
 
 class GeocodingServiceTests(SimpleTestCase):
@@ -45,6 +51,76 @@ class GeocodingServiceTests(SimpleTestCase):
             "CaterinGo-tests/1.0",
         )
         urlopen.assert_called_once()
+
+
+class RoutingServiceTests(SimpleTestCase):
+    def tearDown(self):
+        cache.clear()
+
+    @override_settings(OSRM_USER_AGENT="CaterinGo-tests/1.0")
+    @patch(
+        "catering.services.routing.urlopen",
+        return_value=BytesIO(
+            b'{"code":"Ok","distances":[[0,1200.5],[1350,0]],'
+            b'"durations":[[0,180.2],[195.4,0]]}'
+        ),
+    )
+    def test_road_matrix_uses_longitude_first_and_caches_result(self, urlopen):
+        cache.clear()
+        coordinates = [
+            Coordinate(
+                latitude=Decimal("52.229676"),
+                longitude=Decimal("21.012229"),
+            ),
+            Coordinate(
+                latitude=Decimal("52.249676"),
+                longitude=Decimal("21.032229"),
+            ),
+        ]
+
+        first_result = get_road_matrix(coordinates)
+        second_result = get_road_matrix(coordinates)
+
+        self.assertEqual(first_result, second_result)
+        self.assertEqual(first_result.distances[0][1], 1200.5)
+        self.assertEqual(first_result.durations[1][0], 195.4)
+        request = urlopen.call_args.args[0]
+        self.assertIn(
+            "21.012229,52.229676;21.032229,52.249676",
+            request.full_url,
+        )
+        self.assertEqual(
+            request.get_header("User-agent"),
+            "CaterinGo-tests/1.0",
+        )
+        urlopen.assert_called_once()
+
+    @patch(
+        "catering.services.routing.urlopen",
+        return_value=BytesIO(b'{"code":"NoTable","message":"No route found"}'),
+    )
+    def test_road_matrix_reports_provider_error(self, urlopen):
+        cache.clear()
+        coordinates = [
+            Coordinate(Decimal("52.229676"), Decimal("21.012229")),
+            Coordinate(Decimal("52.249676"), Decimal("21.032229")),
+        ]
+
+        with self.assertRaisesMessage(RoutingProviderError, "No route found"):
+            get_road_matrix(coordinates)
+
+        urlopen.assert_called_once()
+
+    @override_settings(OSRM_MAX_COORDINATES=2)
+    def test_road_matrix_rejects_too_many_coordinates(self):
+        coordinates = [
+            Coordinate(Decimal("52.1"), Decimal("21.1")),
+            Coordinate(Decimal("52.2"), Decimal("21.2")),
+            Coordinate(Decimal("52.3"), Decimal("21.3")),
+        ]
+
+        with self.assertRaisesMessage(ValueError, "At most 2"):
+            get_road_matrix(coordinates)
 
 
 class AddressAPITests(APITestCase):
@@ -586,7 +662,116 @@ class RouteAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("start_address_id", response.json())
 
-    def test_unavailable_optimizer_preserves_current_route(self):
+    @patch("catering.services.route_optimization.get_road_matrix")
+    def test_optimize_route_uses_pending_orders_and_shortest_path(
+        self,
+        get_road_matrix,
+    ):
+        first_delivery = Address.objects.create(
+            street="ul. Pierwsza 2",
+            city="Warszawa",
+            postal_code="00-002",
+            latitude=Decimal("52.239676"),
+            longitude=Decimal("21.022229"),
+        )
+        second_delivery = Address.objects.create(
+            street="ul. Druga 3",
+            city="Warszawa",
+            postal_code="00-003",
+            latitude=Decimal("52.244676"),
+            longitude=Decimal("21.027229"),
+        )
+        skipped_address = Address.objects.create(
+            street="ul. Anulowana 4",
+            city="Warszawa",
+            postal_code="00-004",
+        )
+        first_order = Order.objects.create(address=first_delivery)
+        second_order = Order.objects.create(address=second_delivery)
+        third_order = Order.objects.create(address=second_delivery)
+        Order.objects.create(
+            address=skipped_address,
+            status=Order.Status.CANCELLED,
+        )
+        Order.objects.create(
+            address=skipped_address,
+            status=Order.Status.DELIVERED,
+        )
+        get_road_matrix.return_value = RoadMatrix(
+            distances=(
+                (0, 10, 2, 50),
+                (10, 0, 10, 2),
+                (2, 2, 0, 10),
+                (50, 2, 10, 0),
+            ),
+            durations=(
+                (0, 100, 20, 500),
+                (100, 0, 100, 20),
+                (20, 20, 0, 100),
+                (500, 20, 100, 0),
+            ),
+        )
+
+        response = self.client.post(
+            self.optimize_url,
+            {
+                "start_address_id": self.start_address.id,
+                "end_address_id": self.end_address.id,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.json()["distance_meters"], 6)
+        self.assertEqual(response.json()["duration_seconds"], 60)
+        stops = response.json()["stops"]
+        self.assertEqual(
+            [stop["address_id"] for stop in stops],
+            [
+                self.start_address.id,
+                second_delivery.id,
+                first_delivery.id,
+                self.end_address.id,
+            ],
+        )
+        self.assertEqual(stops[1]["order_ids"], [second_order.id, third_order.id])
+        self.assertEqual(stops[2]["order_ids"], [first_order.id])
+        self.assertFalse(
+            any(stop["address_id"] == skipped_address.id for stop in stops)
+        )
+        self.assertEqual(Route.objects.count(), 1)
+
+    @patch("catering.services.route_optimization.get_road_matrix")
+    def test_pending_address_without_coordinates_rejects_optimization(
+        self,
+        get_road_matrix,
+    ):
+        missing_address = Address.objects.create(
+            street="ul. Bez Punktu 5",
+            city="Warszawa",
+            postal_code="00-005",
+        )
+        Order.objects.create(address=missing_address)
+
+        response = self.client.post(
+            self.optimize_url,
+            {
+                "start_address_id": self.start_address.id,
+                "end_address_id": self.end_address.id,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json()["address_ids"], [missing_address.id])
+        self.assertEqual(Route.objects.count(), 0)
+        get_road_matrix.assert_not_called()
+
+    @patch(
+        "catering.services.route_optimization.get_road_matrix",
+        side_effect=RoutingProviderError("OSRM is unavailable"),
+    )
+    def test_provider_failure_preserves_current_route(self, get_road_matrix):
         route = self.create_route()
 
         response = self.client.post(
@@ -604,3 +789,4 @@ class RouteAPITests(APITestCase):
         )
         self.assertEqual(Route.objects.count(), 1)
         self.assertEqual(Route.objects.get(), route)
+        get_road_matrix.assert_called_once()

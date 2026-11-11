@@ -11,6 +11,12 @@ from .serializers import (
     RouteOptimizationRequestSerializer,
     RouteSerializer,
 )
+from .services.route_optimization import (
+    MissingCoordinatesError,
+    RouteOptimizationError,
+    optimize_route,
+)
+from .services.routing import RoutingProviderError
 
 
 class AddressViewSet(viewsets.ModelViewSet):
@@ -57,7 +63,33 @@ class RouteOptimizationView(APIView):
         serializer = RouteOptimizationRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
+        try:
+            route = optimize_route(**serializer.validated_data)
+        except MissingCoordinatesError as error:
+            return Response(
+                {
+                    "detail": str(error),
+                    "address_ids": error.address_ids,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except ValueError as error:
+            return Response(
+                {"detail": str(error)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except RoutingProviderError:
+            return Response(
+                {"detail": "Could not retrieve road distances."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        except RouteOptimizationError as error:
+            return Response(
+                {"detail": str(error)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         return Response(
-            {"detail": "The routing provider is not configured yet."},
-            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            RouteSerializer(route).data,
+            status=status.HTTP_201_CREATED,
         )
