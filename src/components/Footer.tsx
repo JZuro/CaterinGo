@@ -54,7 +54,17 @@ function Footer() {
 					</button>
 				</div>
 				<div>
-					<p className="text-[10px] px-20">©2026 JZuro</p>
+					<p className="px-5 text-right text-[10px] sm:px-20">
+						©2026 JZuro · Geocoding ©{" "}
+						<a
+							href="https://www.openstreetmap.org/copyright"
+							target="_blank"
+							rel="noreferrer"
+							className="underline"
+						>
+							OpenStreetMap contributors
+						</a>
+					</p>
 				</div>
 			</div>
 		</footer>

@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -26,6 +27,19 @@ SECRET_KEY = 'django-insecure-7&f7pujjv=^^d$ynp#!fhwz^_^6$e&5rrd&n@f+e2m)t0ixwnf
 DEBUG = True
 
 ALLOWED_HOSTS = []
+
+
+NOMINATIM_BASE_URL = os.getenv(
+    "NOMINATIM_BASE_URL",
+    "https://nominatim.openstreetmap.org",
+)
+NOMINATIM_USER_AGENT = os.getenv(
+    "NOMINATIM_USER_AGENT",
+    "CaterinGo/1.0",
+)
+NOMINATIM_COUNTRY_CODES = os.getenv("NOMINATIM_COUNTRY_CODES", "pl")
+NOMINATIM_TIMEOUT = 5
+NOMINATIM_CACHE_TIMEOUT = 60 * 60 * 24 * 30
 
 
 # Application definition

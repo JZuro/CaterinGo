@@ -1,8 +1,50 @@
+from decimal import Decimal
+from io import BytesIO
+from unittest.mock import patch
+
+from django.core.cache import cache
+from django.test import SimpleTestCase, override_settings
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
 from .models import Address, Meal, Order, OrderItem
+from .services.geocoding import Coordinates, geocode_address
+
+
+class GeocodingServiceTests(SimpleTestCase):
+    def tearDown(self):
+        cache.clear()
+
+    @override_settings(NOMINATIM_USER_AGENT="CaterinGo-tests/1.0")
+    @patch(
+        "catering.services.geocoding.urlopen",
+        return_value=BytesIO(b'[{"lat": "51.759248", "lon": "19.455983"}]'),
+    )
+    def test_geocoding_uses_identifying_header_and_caches_result(self, urlopen):
+        cache.clear()
+
+        first_result = geocode_address(
+            street="al. gen. Józefa Hallera 5A",
+            city="Łódź",
+            postal_code="90-001",
+        )
+        second_result = geocode_address(
+            street="al. gen. Józefa Hallera 5A",
+            city="Łódź",
+            postal_code="90-001",
+        )
+
+        self.assertEqual(first_result, second_result)
+        if first_result is None:
+            self.fail("Expected coordinates from Nominatim response")
+        self.assertEqual(first_result.latitude, Decimal("51.759248"))
+        self.assertEqual(first_result.longitude, Decimal("19.455983"))
+        self.assertEqual(
+            urlopen.call_args.args[0].get_header("User-agent"),
+            "CaterinGo-tests/1.0",
+        )
+        urlopen.assert_called_once()
 
 
 class AddressAPITests(APITestCase):
@@ -34,7 +76,14 @@ class AddressAPITests(APITestCase):
             ],
         )
 
-    def test_create_address(self):
+    @patch(
+        "catering.serializers.geocode_address",
+        return_value=Coordinates(
+            latitude=Decimal("51.759248"),
+            longitude=Decimal("19.455983"),
+        ),
+    )
+    def test_create_address(self, geocode_address):
         response = self.client.post(
             self.list_url,
             {
@@ -53,6 +102,13 @@ class AddressAPITests(APITestCase):
         self.assertEqual(created_address.apartment, "12/3")
         self.assertEqual(created_address.city, "Łódź")
         self.assertEqual(created_address.postal_code, "90-001")
+        self.assertEqual(created_address.latitude, Decimal("51.759248"))
+        self.assertEqual(created_address.longitude, Decimal("19.455983"))
+        geocode_address.assert_called_once_with(
+            street="al. gen. Józefa Hallera 5A",
+            city="Łódź",
+            postal_code="90-001",
+        )
 
     def test_create_address_requires_postal_code(self):
         response = self.client.post(
@@ -69,7 +125,14 @@ class AddressAPITests(APITestCase):
         self.assertIn("postal_code", response.json())
         self.assertEqual(Address.objects.count(), 1)
 
-    def test_update_address(self):
+    @patch(
+        "catering.serializers.geocode_address",
+        return_value=Coordinates(
+            latitude=Decimal("49.822376"),
+            longitude=Decimal("19.044384"),
+        ),
+    )
+    def test_update_address(self, geocode_address):
         detail_url = reverse("address-detail", args=[self.address.id])
 
         response = self.client.patch(
@@ -83,6 +146,45 @@ class AddressAPITests(APITestCase):
         self.address.refresh_from_db()
         self.assertEqual(self.address.city, "Bielsko-Biała")
         self.assertEqual(self.address.street, "ul. Żółkiewskiego 10/12")
+        self.assertEqual(self.address.latitude, Decimal("49.822376"))
+        self.assertEqual(self.address.longitude, Decimal("19.044384"))
+        geocode_address.assert_called_once_with(
+            street="ul. Żółkiewskiego 10/12",
+            city="Bielsko-Biała",
+            postal_code="27-530",
+        )
+
+    @patch("catering.serializers.geocode_address")
+    def test_unchanged_address_is_not_geocoded_again(self, geocode_address):
+        detail_url = reverse("address-detail", args=[self.address.id])
+
+        response = self.client.patch(
+            detail_url,
+            {"city": "Ostrów Świętokrzyski"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        geocode_address.assert_not_called()
+
+    @patch("catering.serializers.geocode_address", return_value=None)
+    def test_failed_geocoding_clears_stale_coordinates(self, geocode_address):
+        self.address.latitude = Decimal("50.929580")
+        self.address.longitude = Decimal("21.385810")
+        self.address.save(update_fields=("latitude", "longitude"))
+        detail_url = reverse("address-detail", args=[self.address.id])
+
+        response = self.client.patch(
+            detail_url,
+            {"street": "Nieznana 999"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.address.refresh_from_db()
+        self.assertIsNone(self.address.latitude)
+        self.assertIsNone(self.address.longitude)
+        geocode_address.assert_called_once()
 
     def test_delete_address_cascades_to_orders(self):
         order = Order.objects.create(address=self.address)
