@@ -9,5 +9,11 @@ export default defineConfig({
 	server: {
 		host: true,
 		allowedHosts: ["rygyfygy.tail4fc702.ts.net"],
+		proxy: {
+			"/api": {
+				target: "http://127.0.0.1:8000",
+				changeOrigin: true,
+			},
+		},
 	},
 });

@@ -24,7 +24,7 @@ const router = createBrowserRouter([
 ]);
 
 // run mock api during development
-if (import.meta.env.DEV) {
+if (import.meta.env.DEV && import.meta.env.VITE_USE_MOCKS === "true") {
 	const { network } = await import("virtual:msw");
 	const { handlers } = await import("./mocks/handlers");
 
