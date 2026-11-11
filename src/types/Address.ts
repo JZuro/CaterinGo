@@ -1,9 +1,12 @@
-export type Address = {
-	id: number;
+export type AddressInput = {
 	street: string;
 	apartment: string;
 	city: string;
 	postal_code: string;
 };
 
-export type AddressInput = Omit<Address, "id">;
+export type Address = AddressInput & {
+	id: number;
+	latitude: string | null;
+	longitude: string | null;
+};

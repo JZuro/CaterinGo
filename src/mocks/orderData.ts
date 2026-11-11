@@ -1,17 +1,12 @@
 import type { Order } from "../types/Order";
+import { addressData } from "./addressData";
 
 export const orderData: Order[] = [
 	{
 		id: 1001,
 		status: "delivered",
 
-		address: {
-			id: 1,
-			street: "al. 3 Maja 1",
-			apartment: "—",
-			city: "Kraków",
-			postal_code: "30-062",
-		},
+		address: addressData[0],
 
 		items: [
 			{
@@ -36,13 +31,7 @@ export const orderData: Order[] = [
 		id: 1002,
 		status: "delivered",
 
-		address: {
-			id: 4,
-			street: "św. Marka 17",
-			apartment: "—",
-			city: "Kraków",
-			postal_code: "31-018",
-		},
+		address: addressData[3],
 
 		items: [
 			{
@@ -67,13 +56,7 @@ export const orderData: Order[] = [
 		id: 1003,
 		status: "pending",
 
-		address: {
-			id: 5,
-			street: "Pijarska 8",
-			apartment: "—",
-			city: "Kraków",
-			postal_code: "31-015",
-		},
+		address: addressData[4],
 
 		items: [
 			{
@@ -90,13 +73,7 @@ export const orderData: Order[] = [
 		id: 1004,
 		status: "cancelled",
 
-		address: {
-			id: 18,
-			street: "Gronostajowa 5",
-			apartment: "—",
-			city: "Kraków",
-			postal_code: "30-387",
-		},
+		address: addressData[17],
 
 		items: [
 			{

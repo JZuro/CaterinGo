@@ -1,6 +1,8 @@
-import type { Address } from "../types/Address";
+import type { Address, AddressInput } from "../types/Address";
 
-export const addressData: Address[] = [
+type MockAddress = AddressInput & { id: number };
+
+const addresses: MockAddress[] = [
 	{
 		id: 1,
 		street: "al. 3 Maja 1",
@@ -142,3 +144,9 @@ export const addressData: Address[] = [
 		postal_code: "31-060",
 	},
 ];
+
+export const addressData: Address[] = addresses.map((address) => ({
+	...address,
+	latitude: (50.05 + address.id * 0.001).toFixed(6),
+	longitude: (19.9 + address.id * 0.001).toFixed(6),
+}));
