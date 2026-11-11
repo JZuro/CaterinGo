@@ -2,6 +2,7 @@ from decimal import Decimal
 from io import BytesIO
 from unittest.mock import patch
 
+from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.test import SimpleTestCase, override_settings
 from django.urls import reverse
@@ -16,6 +17,186 @@ from .services.routing import (
     RoutingProviderError,
     get_road_matrix,
 )
+
+User = get_user_model()
+
+
+class AuthenticatedAPITestCase(APITestCase):
+    def setUp(self):
+        super().setUp()
+        self.user = User.objects.create_user(
+            username=f"user-{self.__class__.__name__}",
+            password="TestPassword123!",
+        )
+        self.client.force_authenticate(user=self.user)
+
+
+class AuthenticationAPITests(APITestCase):
+    def test_signup_creates_user_and_returns_token(self):
+        response = self.client.post(
+            reverse("signup"),
+            {
+                "username": "new-driver",
+                "password": "SafeDriverPassword123!",
+                "password_confirm": "SafeDriverPassword123!",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        user = User.objects.get(username="new-driver")
+        self.assertTrue(user.check_password("SafeDriverPassword123!"))
+        self.assertNotEqual(user.password, "SafeDriverPassword123!")
+        self.assertIn("token", response.json())
+        self.assertEqual(response.json()["user"]["username"], "new-driver")
+
+    def test_signup_rejects_mismatched_passwords(self):
+        response = self.client.post(
+            reverse("signup"),
+            {
+                "username": "new-driver",
+                "password": "SafeDriverPassword123!",
+                "password_confirm": "SomethingElse123!",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("password_confirm", response.json())
+        self.assertFalse(User.objects.filter(username="new-driver").exists())
+
+    def test_login_token_unlocks_protected_api(self):
+        User.objects.create_user(
+            username="driver",
+            password="SafeDriverPassword123!",
+        )
+        login_response = self.client.post(
+            reverse("login"),
+            {
+                "username": "driver",
+                "password": "SafeDriverPassword123!",
+            },
+            format="json",
+        )
+
+        self.assertEqual(login_response.status_code, status.HTTP_200_OK)
+        token = login_response.json()["token"]
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {token}")
+
+        response = self.client.get(reverse("address-list"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_protected_api_rejects_anonymous_request(self):
+        response = self.client.get(reverse("address-list"))
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class OwnershipAPITests(AuthenticatedAPITestCase):
+    def setUp(self):
+        super().setUp()
+        self.other_user = User.objects.create_user(
+            username="other-driver",
+            password="OtherDriverPassword123!",
+        )
+        self.own_address = Address.objects.create(
+            user=self.user,
+            street="ul. Własna 1",
+            city="Poznań",
+            postal_code="60-001",
+        )
+        self.other_address = Address.objects.create(
+            user=self.other_user,
+            street="ul. Cudza 2",
+            city="Poznań",
+            postal_code="60-002",
+        )
+        self.own_meal = Meal.objects.create(
+            user=self.user,
+            name="Dieta Kierowcy",
+        )
+        self.other_meal = Meal.objects.create(
+            user=self.other_user,
+            name="Dieta Kierowcy",
+        )
+
+    def test_endpoints_return_only_current_users_data(self):
+        own_order = Order.objects.create(
+            user=self.user,
+            address=self.own_address,
+        )
+        Order.objects.create(
+            user=self.other_user,
+            address=self.other_address,
+        )
+        own_route = Route.objects.create(
+            user=self.user,
+            start={},
+            end={},
+            stops=[],
+            distance_meters=100,
+            duration_seconds=20,
+        )
+        Route.objects.create(
+            user=self.other_user,
+            start={},
+            end={},
+            stops=[],
+            distance_meters=200,
+            duration_seconds=40,
+        )
+
+        addresses_response = self.client.get(reverse("address-list"))
+        meals_response = self.client.get(reverse("meal-list"))
+        orders_response = self.client.get(reverse("order-list"))
+        route_response = self.client.get(reverse("current-route"))
+
+        self.assertEqual(addresses_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            [address["id"] for address in addresses_response.json()],
+            [self.own_address.id],
+        )
+        self.assertEqual(
+            [meal["id"] for meal in meals_response.json()],
+            [self.own_meal.id],
+        )
+        self.assertEqual(
+            [order["id"] for order in orders_response.json()],
+            [own_order.id],
+        )
+        self.assertEqual(route_response.json()["id"], own_route.id)
+
+    def test_cannot_retrieve_another_users_address(self):
+        response = self.client.get(
+            reverse("address-detail", args=[self.other_address.id])
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_order_cannot_reference_another_users_data(self):
+        response = self.client.post(
+            reverse("order-list"),
+            {
+                "address_id": self.other_address.id,
+                "items": [
+                    {
+                        "meal_id": self.other_meal.id,
+                        "quantity": 1,
+                    }
+                ],
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Order.objects.filter(user=self.user).count(), 0)
+
+    def test_same_meal_name_is_allowed_for_different_users(self):
+        self.assertEqual(
+            Meal.objects.filter(name="Dieta Kierowcy").count(),
+            2,
+        )
 
 
 class GeocodingServiceTests(SimpleTestCase):
@@ -123,10 +304,12 @@ class RoutingServiceTests(SimpleTestCase):
             get_road_matrix(coordinates)
 
 
-class AddressAPITests(APITestCase):
+class AddressAPITests(AuthenticatedAPITestCase):
     def setUp(self):
+        super().setUp()
         self.list_url = reverse("address-list")
         self.address = Address.objects.create(
+            user=self.user,
             street="ul. Żółkiewskiego 10/12",
             apartment="4B",
             city="Ostrów Świętokrzyski",
@@ -199,7 +382,7 @@ class AddressAPITests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("postal_code", response.json())
-        self.assertEqual(Address.objects.count(), 1)
+        self.assertEqual(Address.objects.filter(user=self.user).count(), 1)
 
     @patch(
         "catering.serializers.geocode_address",
@@ -263,8 +446,11 @@ class AddressAPITests(APITestCase):
         geocode_address.assert_called_once()
 
     def test_delete_address_cascades_to_orders(self):
-        order = Order.objects.create(address=self.address)
-        meal = Meal.objects.create(name="Dieta Wysokobiałkowa")
+        order = Order.objects.create(user=self.user, address=self.address)
+        meal = Meal.objects.create(
+            user=self.user,
+            name="Dieta Wysokobiałkowa",
+        )
         order_item = OrderItem.objects.create(
             order=order,
             meal=meal,
@@ -281,10 +467,14 @@ class AddressAPITests(APITestCase):
         self.assertTrue(Meal.objects.filter(id=meal.id).exists())
 
 
-class MealAPITests(APITestCase):
+class MealAPITests(AuthenticatedAPITestCase):
     def setUp(self):
+        super().setUp()
         self.list_url = reverse("meal-list")
-        self.meal = Meal.objects.create(name="Dieta Wysokobiałkowa")
+        self.meal = Meal.objects.create(
+            user=self.user,
+            name="Dieta Wysokobiałkowa",
+        )
 
     def test_list_meals(self):
         response = self.client.get(self.list_url)
@@ -321,7 +511,7 @@ class MealAPITests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("name", response.json())
-        self.assertEqual(Meal.objects.count(), 1)
+        self.assertEqual(Meal.objects.filter(user=self.user).count(), 1)
 
     def test_update_meal(self):
         detail_url = reverse("meal-detail", args=[self.meal.id])
@@ -347,12 +537,13 @@ class MealAPITests(APITestCase):
 
     def test_delete_meal_cascades_to_order_items(self):
         address = Address.objects.create(
+            user=self.user,
             street="ul. Leśna 7",
             apartment="2A",
             city="Białystok",
             postal_code="15-001",
         )
-        order = Order.objects.create(address=address)
+        order = Order.objects.create(user=self.user, address=address)
         order_item = OrderItem.objects.create(
             order=order,
             meal=self.meal,
@@ -374,18 +565,27 @@ class MealAPITests(APITestCase):
         self.assertTrue(Address.objects.filter(id=address_id).exists())
 
 
-class OrderAPITests(APITestCase):
+class OrderAPITests(AuthenticatedAPITestCase):
     def setUp(self):
+        super().setUp()
         self.list_url = reverse("order-list")
         self.address = Address.objects.create(
+            user=self.user,
             street="ul. Świętojańska 15",
             apartment="7",
             city="Gdynia",
             postal_code="81-368",
         )
-        self.meal = Meal.objects.create(name="Dieta Wysokobiałkowa")
-        self.other_meal = Meal.objects.create(name="Low Carb")
+        self.meal = Meal.objects.create(
+            user=self.user,
+            name="Dieta Wysokobiałkowa",
+        )
+        self.other_meal = Meal.objects.create(
+            user=self.user,
+            name="Low Carb",
+        )
         self.order = Order.objects.create(
+            user=self.user,
             address=self.address,
             status=Order.Status.PENDING,
         )
@@ -471,7 +671,7 @@ class OrderAPITests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("items", response.json())
-        self.assertEqual(Order.objects.count(), 1)
+        self.assertEqual(Order.objects.filter(user=self.user).count(), 1)
 
     def test_create_order_rejects_duplicate_meals(self):
         response = self.client.post(
@@ -495,7 +695,7 @@ class OrderAPITests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("items", response.json())
-        self.assertEqual(Order.objects.count(), 1)
+        self.assertEqual(Order.objects.filter(user=self.user).count(), 1)
 
     def test_create_order_rejects_quantity_below_one(self):
         response = self.client.post(
@@ -515,7 +715,7 @@ class OrderAPITests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("items", response.json())
-        self.assertEqual(Order.objects.count(), 1)
+        self.assertEqual(Order.objects.filter(user=self.user).count(), 1)
 
     def test_update_status_preserves_items(self):
         detail_url = reverse("order-detail", args=[self.order.id])
@@ -576,11 +776,13 @@ class OrderAPITests(APITestCase):
         self.assertTrue(Meal.objects.filter(id=meal_id).exists())
 
 
-class RouteAPITests(APITestCase):
+class RouteAPITests(AuthenticatedAPITestCase):
     def setUp(self):
+        super().setUp()
         self.current_url = reverse("current-route")
         self.optimize_url = reverse("optimize-route")
         self.start_address = Address.objects.create(
+            user=self.user,
             street="ul. Startowa 1",
             city="Warszawa",
             postal_code="00-001",
@@ -588,6 +790,7 @@ class RouteAPITests(APITestCase):
             longitude=Decimal("21.012229"),
         )
         self.end_address = Address.objects.create(
+            user=self.user,
             street="ul. Końcowa 10",
             city="Warszawa",
             postal_code="00-950",
@@ -597,6 +800,7 @@ class RouteAPITests(APITestCase):
 
     def create_route(self, order_ids=None):
         return Route.objects.create(
+            user=self.user,
             start={
                 "address_id": self.start_address.id,
                 "label": "ul. Startowa 1, 00-001 Warszawa",
@@ -630,6 +834,7 @@ class RouteAPITests(APITestCase):
 
     def test_current_route_is_unchanged_when_order_status_changes(self):
         order = Order.objects.create(
+            user=self.user,
             address=self.end_address,
             status=Order.Status.PENDING,
         )
@@ -668,6 +873,7 @@ class RouteAPITests(APITestCase):
         get_road_matrix,
     ):
         first_delivery = Address.objects.create(
+            user=self.user,
             street="ul. Pierwsza 2",
             city="Warszawa",
             postal_code="00-002",
@@ -675,6 +881,7 @@ class RouteAPITests(APITestCase):
             longitude=Decimal("21.022229"),
         )
         second_delivery = Address.objects.create(
+            user=self.user,
             street="ul. Druga 3",
             city="Warszawa",
             postal_code="00-003",
@@ -682,18 +889,30 @@ class RouteAPITests(APITestCase):
             longitude=Decimal("21.027229"),
         )
         skipped_address = Address.objects.create(
+            user=self.user,
             street="ul. Anulowana 4",
             city="Warszawa",
             postal_code="00-004",
         )
-        first_order = Order.objects.create(address=first_delivery)
-        second_order = Order.objects.create(address=second_delivery)
-        third_order = Order.objects.create(address=second_delivery)
+        first_order = Order.objects.create(
+            user=self.user,
+            address=first_delivery,
+        )
+        second_order = Order.objects.create(
+            user=self.user,
+            address=second_delivery,
+        )
+        third_order = Order.objects.create(
+            user=self.user,
+            address=second_delivery,
+        )
         Order.objects.create(
+            user=self.user,
             address=skipped_address,
             status=Order.Status.CANCELLED,
         )
         Order.objects.create(
+            user=self.user,
             address=skipped_address,
             status=Order.Status.DELIVERED,
         )
@@ -739,7 +958,7 @@ class RouteAPITests(APITestCase):
         self.assertFalse(
             any(stop["address_id"] == skipped_address.id for stop in stops)
         )
-        self.assertEqual(Route.objects.count(), 1)
+        self.assertEqual(Route.objects.filter(user=self.user).count(), 1)
 
     @patch("catering.services.route_optimization.get_road_matrix")
     def test_pending_address_without_coordinates_rejects_optimization(
@@ -747,11 +966,12 @@ class RouteAPITests(APITestCase):
         get_road_matrix,
     ):
         missing_address = Address.objects.create(
+            user=self.user,
             street="ul. Bez Punktu 5",
             city="Warszawa",
             postal_code="00-005",
         )
-        Order.objects.create(address=missing_address)
+        Order.objects.create(user=self.user, address=missing_address)
 
         response = self.client.post(
             self.optimize_url,
@@ -764,7 +984,7 @@ class RouteAPITests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.json()["address_ids"], [missing_address.id])
-        self.assertEqual(Route.objects.count(), 0)
+        self.assertEqual(Route.objects.filter(user=self.user).count(), 0)
         get_road_matrix.assert_not_called()
 
     @patch(
@@ -787,6 +1007,6 @@ class RouteAPITests(APITestCase):
             response.status_code,
             status.HTTP_503_SERVICE_UNAVAILABLE,
         )
-        self.assertEqual(Route.objects.count(), 1)
-        self.assertEqual(Route.objects.get(), route)
+        self.assertEqual(Route.objects.filter(user=self.user).count(), 1)
+        self.assertEqual(Route.objects.get(user=self.user), route)
         get_road_matrix.assert_called_once()

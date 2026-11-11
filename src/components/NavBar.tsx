@@ -1,8 +1,15 @@
 import { useState } from "react";
 import { Link } from "react-router";
+import { useAuth } from "../auth/useAuth";
 
 function NavBar() {
 	const [menuOpen, setMenuOpen] = useState(false);
+	const { user, logout } = useAuth();
+
+	const handleLogout = () => {
+		setMenuOpen(false);
+		void logout();
+	};
 
 	return (
 		<header className="bg-base-300 sticky top-0 z-50 w-full shrink-0 border-b border-gray-950/5 md:w-screen md:self-center dark:border-white/15">
@@ -70,6 +77,10 @@ function NavBar() {
 					<Link to="/routes" onClick={() => setMenuOpen(false)}>
 						Routes
 					</Link>
+					<span className="hidden opacity-70 md:inline">{user?.username}</span>
+					<button type="button" onClick={handleLogout} className="text-left">
+						Log out
+					</button>
 				</nav>
 			</div>
 		</header>

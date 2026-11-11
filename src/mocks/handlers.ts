@@ -7,8 +7,10 @@ import type {
 	RouteOptimizationInput,
 	RouteStop,
 } from "../types/Route";
+import type { LoginInput, SignupInput, User } from "../types/Auth";
 
 let currentRoute: OptimizedRoute | null = null;
+let currentUser: User = { id: 1, username: "demo" };
 
 const toStop = (
 	addressId: number,
@@ -45,6 +47,34 @@ const toStop = (
 };
 
 export const handlers = [
+	http.post("/api/auth/login/", async ({ request }) => {
+		const input = (await request.json()) as LoginInput;
+
+		if (input.username !== "demo" || input.password !== "demo1234") {
+			return HttpResponse.json(
+				{ detail: "Invalid username or password." },
+				{ status: 400 },
+			);
+		}
+
+		currentUser = { id: 1, username: "demo" };
+		return HttpResponse.json({ token: "mock-token", user: currentUser });
+	}),
+	http.post("/api/auth/signup/", async ({ request }) => {
+		const input = (await request.json()) as SignupInput;
+		currentUser = { id: Date.now(), username: input.username };
+
+		return HttpResponse.json(
+			{ token: "mock-token", user: currentUser },
+			{ status: 201 },
+		);
+	}),
+	http.get("/api/auth/me/", () => {
+		return HttpResponse.json(currentUser);
+	}),
+	http.post("/api/auth/logout/", () => {
+		return new HttpResponse(null, { status: 204 });
+	}),
 	http.get("/api/addresses/", () => {
 		return HttpResponse.json(addressData);
 	}),
