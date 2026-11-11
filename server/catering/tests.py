@@ -97,5 +97,5 @@ class AddressAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(Address.objects.filter(id=self.address.id).exists())
         self.assertFalse(Order.objects.filter(id=order.id).exists())
-        self.assertFalse(OrderItem.objects.filter(id=order_item.id).exists())
+        self.assertFalse(OrderItem.objects.filter(pk=order_item.pk).exists())
         self.assertTrue(Meal.objects.filter(id=meal.id).exists())
