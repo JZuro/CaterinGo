@@ -6,7 +6,7 @@ function NavBar() {
 
 	return (
 		<header className="bg-base-300 sticky top-0 z-50 w-full shrink-0 border-b border-gray-950/5 md:w-screen md:self-center dark:border-white/15">
-			<div className="mx-auto flex w-full flex-wrap items-center justify-between gap-3 px-5 py-4 sm:px-8">
+			<div className="mx-auto flex w-full flex-wrap items-center justify-between gap-3 px-5 py-2 sm:px-8">
 				<Link
 					to="/"
 					onClick={() => setMenuOpen(false)}

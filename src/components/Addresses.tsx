@@ -1,10 +1,24 @@
 import { useEffect, useState } from "react";
-import { getAddresses } from "../api/addresses";
-import type { Address } from "../types/Address";
+import { createAddress, getAddresses, updateAddress } from "../api/addresses";
+import type { Address, AddressInput } from "../types/Address";
+import AddressForm from "./AddressForm";
+
+type AddressFormState =
+	| { mode: "create" }
+	| { mode: "edit"; address: Address }
+	| null;
+
+const toAddressInput = (address: Address): AddressInput => ({
+	street: address.street,
+	apartment: address.apartment,
+	city: address.city,
+	postal_code: address.postal_code,
+});
 
 const Addresses = () => {
 	const [addresses, setAddresses] = useState<Address[]>([]);
 	const [error, setError] = useState("");
+	const [formState, setFormState] = useState<AddressFormState>(null);
 
 	useEffect(() => {
 		getAddresses()
@@ -12,13 +26,85 @@ const Addresses = () => {
 			.catch(() => setError("Could not load data: addresses"));
 	}, []);
 
+	const handleCreate = async (values: AddressInput) => {
+		const createdAddress = await createAddress(values);
+
+		setAddresses((current) => [...current, createdAddress]);
+		setFormState(null);
+	};
+
+	const handleUpdate = async (values: AddressInput) => {
+		if (formState?.mode !== "edit") {
+			return;
+		}
+
+		const updatedAddress = await updateAddress(
+			formState.address.id,
+			values
+		);
+
+		setAddresses((current) =>
+			current.map((address) =>
+				address.id === updatedAddress.id ? updatedAddress : address
+			)
+		);
+
+		setFormState(null);
+	};
+
 	if (error) {
 		return <p>{error}</p>;
 	}
 
 	return (
-		<>
-			<div className="border-base-content/25 h-full w-full min-w-0 max-w-full overflow-hidden border-b">
+		<div className="flex h-full min-h-0 w-full flex-col">
+			<div className="border-base-content/25 flex shrink-0 justify-end border-b">
+				<button
+					type="button"
+					className="btn btn-primary"
+					onClick={() => setFormState({ mode: "create" })}
+				>
+					+
+				</button>
+			</div>
+
+			{formState && (
+				<section className="border-base-content/25 shrink-0 border-b p-4">
+					<div className="mx-auto max-w-xl text-left">
+						<h2 className="mb-4">
+							{formState.mode === "create"
+								? "Add address"
+								: "Edit address"}
+						</h2>
+
+						<AddressForm
+							key={
+								formState.mode === "create"
+									? "create"
+									: formState.address.id
+							}
+							initialValues={
+								formState.mode === "edit"
+									? toAddressInput(formState.address)
+									: undefined
+							}
+							submitLabel={
+								formState.mode === "create"
+									? "Add address"
+									: "Save changes"
+							}
+							onSubmit={
+								formState.mode === "create"
+									? handleCreate
+									: handleUpdate
+							}
+							onCancel={() => setFormState(null)}
+						/>
+					</div>
+				</section>
+			)}
+
+			<div className="border-base-content/25 min-h-0 w-full min-w-0 flex-1 overflow-hidden border-b">
 				<div className="table-scroll">
 					<table className="table">
 						<thead>
@@ -35,6 +121,7 @@ const Addresses = () => {
 								<th className="actions-column">Actions</th>
 							</tr>
 						</thead>
+
 						<tbody>
 							{addresses.map((address) => (
 								<tr key={address.id}>
@@ -44,22 +131,33 @@ const Addresses = () => {
 									<td>{address.postal_code}</td>
 									<td className="actions-column">
 										<button
+											type="button"
 											className="btn btn-circle btn-text btn-sm"
 											aria-label="Edit"
+											onClick={() =>
+												setFormState({
+													mode: "edit",
+													address,
+												})
+											}
 										>
-											<span className="icon-[tabler--pencil] size-5"></span>
+											<span className="icon-[tabler--pencil] size-5" />
 										</button>
+
 										<button
+											type="button"
 											className="btn btn-circle btn-text btn-sm"
 											aria-label="Delete"
 										>
-											<span className="icon-[tabler--trash] size-5"></span>
+											<span className="icon-[tabler--trash] size-5" />
 										</button>
+
 										<button
+											type="button"
 											className="btn btn-circle btn-text btn-sm"
 											aria-label="More"
 										>
-											<span className="icon-[tabler--dots-vertical] size-5"></span>
+											<span className="icon-[tabler--dots-vertical] size-5" />
 										</button>
 									</td>
 								</tr>
@@ -68,7 +166,7 @@ const Addresses = () => {
 					</table>
 				</div>
 			</div>
-		</>
+		</div>
 	);
 };
 
