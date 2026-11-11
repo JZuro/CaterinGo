@@ -5,23 +5,59 @@
 @source "./node_modules/flyonui/flyonui.js";
 @custom-variant dark (&:where(.dark, .dark *));
 
-@theme {
-  --font-sans: 'Roboto', sans-serif;
-  --font-mono: 'Roboto', sans-serif;
+/* poppins-regular - latin */
+@font-face {
+  font-display: swap;
+  font-family: 'Poppins';
+  font-style: normal;
+  src: url('./assets/fonts/poppins-v24-latin-regular.woff2') format('woff2');
 }
 
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
+  --brand-main: #404e3b;
+  --brand-sage: #7b9669;
+  --brand-slate: #6c8480;
+  --brand-gray: #e6e6e6;
+  --brand-pale: #bac8b1;
+  --navbar-text: var(--brand-gray);
+  --navbar-hover: var(--brand-pale);
+  --field-border: #454a47;
+
+  /* App colors used by the custom layout. */
+  --text: #262626;
+  --text-h: #0a0a0a;
+  --bg: #ffffff;
+  --border: #d5dbd1;
+  --code-bg: #f3f5f1;
+  --accent: var(--brand-main);
+  --accent-bg: color-mix(in srgb, var(--brand-sage) 14%, transparent);
+  --accent-border: var(--brand-sage);
+  --social-bg: #f3f5f1;
   --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+    rgba(0, 0, 0, 0.1) 0 10px 15px -3px,
+    rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+
+  /* FlyonUI semantic colors. Components inherit these automatically. */
+  --color-base-100: #ffffff;
+  --color-base-200: #f3f5f1;
+  --color-base-300: var(--brand-main);
+  --color-base-content: #171717;
+  --color-primary: var(--brand-main);
+  --color-primary-content: var(--brand-gray);
+  --color-secondary: var(--brand-slate);
+  --color-secondary-content: #111611;
+  --color-accent: var(--brand-sage);
+  --color-accent-content: #172015;
+  --color-neutral: #262626;
+  --color-neutral-content: #ffffff;
+  --color-info: #526d68;
+  --color-info-content: #ffffff;
+  --color-success: #526b43;
+  --color-success-content: #ffffff;
+  --color-warning: #a16207;
+  --color-warning-content: #ffffff;
+  --color-error: #b91c1c;
+  --color-error-content: #ffffff;
 
   --sans: var(--font-sans);
   --heading: var(--font-sans);
@@ -43,17 +79,40 @@
 }
 
 :root.dark {
-  --text: #9ca3af;
-  --text-h: #f3f4f6;
-  --bg: #16171d;
-  --border: #2e303a;
-  --code-bg: #1f2028;
-  --accent: #c084fc;
-  --accent-bg: rgba(192, 132, 252, 0.15);
-  --accent-border: rgba(192, 132, 252, 0.5);
-  --social-bg: rgba(47, 48, 58, 0.5);
+  --field-border: #858d89;
+  --text: var(--brand-gray);
+  --text-h: #ffffff;
+  --bg: #111611;
+  --border: #384137;
+  --code-bg: #20261f;
+  --accent: var(--brand-pale);
+  --accent-bg: color-mix(in srgb, var(--brand-pale) 14%, transparent);
+  --accent-border: var(--brand-pale);
+  --social-bg: #20261f;
   --shadow:
-    rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
+    rgba(0, 0, 0, 0.45) 0 10px 15px -3px,
+    rgba(0, 0, 0, 0.3) 0 4px 6px -2px;
+
+  --color-base-100: #111611;
+  --color-base-200: #20261f;
+  --color-base-300: var(--brand-main);
+  --color-base-content: var(--brand-gray);
+  --color-primary: var(--brand-pale);
+  --color-primary-content: #172015;
+  --color-secondary: var(--brand-slate);
+  --color-secondary-content: #111611;
+  --color-accent: var(--brand-sage);
+  --color-accent-content: #172015;
+  --color-neutral: var(--brand-gray);
+  --color-neutral-content: #111611;
+  --color-info: #91aaa5;
+  --color-info-content: #111611;
+  --color-success: #a2b993;
+  --color-success-content: #111611;
+  --color-warning: #fbbf24;
+  --color-warning-content: #1c1402;
+  --color-error: #f87171;
+  --color-error-content: #210707;
   color-scheme: dark;
 }
 
@@ -76,6 +135,32 @@ body {
   margin: 0;
   min-width: 0;
   overflow-x: hidden;
+  background: var(--bg);
+}
+
+::selection {
+  color: var(--color-primary-content);
+  background: var(--color-primary);
+}
+
+header {
+  color: var(--navbar-text);
+}
+
+header svg {
+  stroke: var(--navbar-text);
+}
+
+header a,
+header button {
+  transition: color 150ms ease, background-color 150ms ease;
+}
+
+header a:hover,
+header a:focus-visible,
+header button:hover,
+header button:focus-visible {
+  color: var(--navbar-hover);
 }
 
 h1,
@@ -107,6 +192,13 @@ p {
   margin: 0;
 }
 
+.input:not(:focus):not(:focus-within),
+.select:not(:focus):not(:focus-within) {
+  --input-color: var(--field-border);
+  border-color: var(--field-border);
+  box-shadow: inset 0 0 0 1px var(--field-border);
+}
+
 .actions-column {
   width: 9rem;
   min-width: 9rem;
@@ -134,4 +226,14 @@ p {
   z-index: 10;
   background: var(--bg);
   box-shadow: 0 1px 0 var(--border);
+}
+
+th {
+  font-weight: 600;
+}
+td {
+  font-weight: 600;
+}
+button {
+  font-weight: 700;
 }
