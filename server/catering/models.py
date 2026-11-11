@@ -1,4 +1,4 @@
-from django.core.validators import MinValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 
@@ -8,6 +8,20 @@ class Address(models.Model):
     apartment = models.CharField(max_length=20, blank=True, default="")
     city = models.CharField(max_length=100)
     postal_code = models.CharField(max_length=20)
+    latitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(-90), MaxValueValidator(90)],
+    )
+    longitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(-180), MaxValueValidator(180)],
+    )
 
     def __str__(self):
         return f"{self.street}, {self.city}"
@@ -60,3 +74,16 @@ class OrderItem(models.Model):
 
     def __str__(self) -> str:
         return f"{self.order}: {self.meal} × {self.quantity}"
+
+
+class Route(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    start = models.JSONField()
+    end = models.JSONField()
+    stops = models.JSONField()
+    distance_meters = models.PositiveIntegerField()
+    duration_seconds = models.PositiveIntegerField()
+
+    def __str__(self) -> str:
+        return f"Route #{self.id} created at {self.created_at}"

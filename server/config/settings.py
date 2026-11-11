@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -26,6 +27,29 @@ SECRET_KEY = 'django-insecure-7&f7pujjv=^^d$ynp#!fhwz^_^6$e&5rrd&n@f+e2m)t0ixwnf
 DEBUG = True
 
 ALLOWED_HOSTS = []
+
+
+NOMINATIM_BASE_URL = os.getenv(
+    "NOMINATIM_BASE_URL",
+    "https://nominatim.openstreetmap.org",
+)
+NOMINATIM_USER_AGENT = os.getenv(
+    "NOMINATIM_USER_AGENT",
+    "CaterinGo/1.0",
+)
+NOMINATIM_COUNTRY_CODES = os.getenv("NOMINATIM_COUNTRY_CODES", "pl")
+NOMINATIM_TIMEOUT = 5
+NOMINATIM_CACHE_TIMEOUT = 60 * 60 * 24 * 30
+
+# The public default is a non-commercial demo service with no uptime guarantee.
+# Use a self-hosted or contracted OSRM endpoint for production.
+OSRM_BASE_URL = os.getenv("OSRM_BASE_URL", "https://router.project-osrm.org")
+OSRM_PROFILE = os.getenv("OSRM_PROFILE", "driving")
+OSRM_USER_AGENT = os.getenv("OSRM_USER_AGENT", "CaterinGo/1.0")
+OSRM_TIMEOUT = 10
+OSRM_CACHE_TIMEOUT = 60 * 60 * 24
+OSRM_MAX_COORDINATES = 25
+ROUTE_EXACT_STOP_LIMIT = 8
 
 
 # Application definition

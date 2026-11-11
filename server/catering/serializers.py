@@ -1,7 +1,8 @@
 from django.db import transaction
 from rest_framework import serializers
 
-from .models import Address, Meal, Order, OrderItem
+from .models import Address, Meal, Order, OrderItem, Route
+from .services.geocoding import geocode_address
 
 
 class AddressSerializer(serializers.ModelSerializer):
@@ -13,8 +14,38 @@ class AddressSerializer(serializers.ModelSerializer):
             "apartment",
             "city",
             "postal_code",
+            "latitude",
+            "longitude",
         )
-        read_only_fields = ("id",)
+        read_only_fields = ("id", "latitude", "longitude")
+
+    def _geocode(self, address):
+        coordinates = geocode_address(
+            street=address.street,
+            city=address.city,
+            postal_code=address.postal_code,
+        )
+        address.latitude = coordinates.latitude if coordinates else None
+        address.longitude = coordinates.longitude if coordinates else None
+        address.save(update_fields=("latitude", "longitude"))
+
+    def create(self, validated_data):
+        address = super().create(validated_data)
+        self._geocode(address)
+        return address
+
+    def update(self, instance, validated_data):
+        address_changed = any(
+            field in validated_data
+            and validated_data[field] != getattr(instance, field)
+            for field in ("street", "city", "postal_code")
+        )
+        address = super().update(instance, validated_data)
+
+        if address_changed:
+            self._geocode(address)
+
+        return address
 
 
 class MealSerializer(serializers.ModelSerializer):
@@ -109,3 +140,50 @@ class OrderSerializer(serializers.ModelSerializer):
                 )
 
         return order
+
+
+class RouteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Route
+        fields = (
+            "id",
+            "created_at",
+            "start",
+            "end",
+            "stops",
+            "distance_meters",
+            "duration_seconds",
+        )
+        read_only_fields = fields
+
+
+class RouteOptimizationRequestSerializer(serializers.Serializer):
+    start_address_id = serializers.PrimaryKeyRelatedField(
+        queryset=Address.objects.all(),
+        source="start_address",
+    )
+    end_address_id = serializers.PrimaryKeyRelatedField(
+        queryset=Address.objects.all(),
+        source="end_address",
+    )
+
+    def validate(self, attrs):
+        missing_coordinates = [
+            input_field
+            for input_field, source_field in (
+                ("start_address_id", "start_address"),
+                ("end_address_id", "end_address"),
+            )
+            if attrs[source_field].latitude is None
+            or attrs[source_field].longitude is None
+        ]
+
+        if missing_coordinates:
+            raise serializers.ValidationError(
+                {
+                    field: "This address has no coordinates."
+                    for field in missing_coordinates
+                }
+            )
+
+        return attrs
