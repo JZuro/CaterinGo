@@ -16,6 +16,7 @@ class MealViewSet(viewsets.ModelViewSet):
     serializer_class = MealSerializer
     permission_classes = (AllowAny,)
 
+
 class OrderViewSet(viewsets.ModelViewSet):
     queryset = (
         Order.objects.select_related("address")
