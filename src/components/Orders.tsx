@@ -12,10 +12,12 @@ import type { Meal } from "../types/Meal";
 import type { Order, OrderInput, OrderStatus } from "../types/Order";
 import { useConfirm } from "./ConfirmContext";
 import OrderForm from "./OrderForm";
+import OrderStatusForm from "./OrderStatusForm";
 
 type OrderFormState =
 	| { mode: "create" }
 	| { mode: "edit"; order: Order }
+	| { mode: "status"; order: Order }
 	| null;
 
 const statusClasses: Record<OrderStatus, string> = {
@@ -99,6 +101,21 @@ const Orders = () => {
 		setFormState(null);
 	};
 
+	const handleStatusUpdate = async (status: OrderStatus) => {
+		if (formState?.mode !== "status") {
+			return;
+		}
+
+		const updatedOrder = await updateOrder(formState.order.id, { status });
+
+		setOrders((current) =>
+			current.map((order) =>
+				order.id === updatedOrder.id ? updatedOrder : order
+			)
+		);
+		setFormState(null);
+	};
+
 	const handleDelete = async (order: Order) => {
 		const confirmed = await confirm({
 			title: "Delete order?",
@@ -120,7 +137,9 @@ const Orders = () => {
 				current.filter((item) => item.id !== order.id)
 			);
 			setFormState((current) =>
-				current?.mode === "edit" && current.order.id === order.id
+				current &&
+				current.mode !== "create" &&
+				current.order.id === order.id
 					? null
 					: current
 			);
@@ -187,34 +206,45 @@ const Orders = () => {
 						<h2 className="mb-4">
 							{formState.mode === "create"
 								? "Add order"
-								: "Edit order"}
+								: formState.mode === "edit"
+									? "Edit order"
+									: `Change order #${formState.order.id} status`}
 						</h2>
 
-						<OrderForm
-							key={
-								formState.mode === "create"
-									? "create"
-									: formState.order.id
-							}
-							addresses={addresses}
-							meals={meals}
-							initialValues={
-								formState.mode === "edit"
-									? toOrderInput(formState.order)
-									: undefined
-							}
-							submitLabel={
-								formState.mode === "create"
-									? "Add order"
-									: "Save changes"
-							}
-							onSubmit={
-								formState.mode === "create"
-									? handleCreate
-									: handleUpdate
-							}
-							onCancel={() => setFormState(null)}
-						/>
+						{formState.mode === "status" ? (
+							<OrderStatusForm
+								key={formState.order.id}
+								initialStatus={formState.order.status}
+								onSubmit={handleStatusUpdate}
+								onCancel={() => setFormState(null)}
+							/>
+						) : (
+							<OrderForm
+								key={
+									formState.mode === "create"
+										? "create"
+										: formState.order.id
+								}
+								addresses={addresses}
+								meals={meals}
+								initialValues={
+									formState.mode === "edit"
+										? toOrderInput(formState.order)
+										: undefined
+								}
+								submitLabel={
+									formState.mode === "create"
+										? "Add order"
+										: "Save changes"
+								}
+								onSubmit={
+									formState.mode === "create"
+										? handleCreate
+										: handleUpdate
+								}
+								onCancel={() => setFormState(null)}
+							/>
+						)}
 					</div>
 				</section>
 			)}
@@ -285,6 +315,12 @@ const Orders = () => {
 											type="button"
 											className="btn btn-circle btn-text btn-sm"
 											aria-label="More"
+											onClick={() =>
+												setFormState({
+													mode: "status",
+													order,
+												})
+											}
 										>
 											<span className="icon-[tabler--dots-vertical] size-5" />
 										</button>

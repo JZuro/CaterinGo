@@ -28,7 +28,7 @@ export const createOrder = async (order: OrderInput): Promise<Order> => {
 
 export const updateOrder = async (
 	id: number,
-	order: OrderInput,
+	order: Partial<OrderInput>,
 ): Promise<Order> => {
 	const response = await fetch(`/api/orders/${id}/`, {
 		method: "PATCH",

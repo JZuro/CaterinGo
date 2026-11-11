@@ -229,14 +229,6 @@ const Addresses = () => {
 										>
 											<span className="icon-[tabler--trash] size-5" />
 										</button>
-
-										<button
-											type="button"
-											className="btn btn-circle btn-text btn-sm"
-											aria-label="More"
-										>
-											<span className="icon-[tabler--dots-vertical] size-5" />
-										</button>
 									</td>
 								</tr>
 							))}
