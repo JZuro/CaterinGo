@@ -4,13 +4,13 @@ import { mealData } from "./mealData";
 import { orderData } from "./orderData";
 
 export const handlers = [
-	http.get("/api/addresses", () => {
+	http.get("/api/addresses/", () => {
 		return HttpResponse.json(addressData);
 	}),
-	http.get("/api/meals", () => {
+	http.get("/api/meals/", () => {
 		return HttpResponse.json(mealData);
 	}),
-	http.get("/api/orders", () => {
+	http.get("/api/orders/", () => {
 		return HttpResponse.json(orderData);
 	}),
 ];

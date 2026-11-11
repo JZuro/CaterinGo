@@ -45,7 +45,7 @@ class Meal(models.Model):
 
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="items")
-    meal = models.ForeignKey(Meal, on_delete=models.PROTECT, related_name="order_items")
+    meal = models.ForeignKey(Meal, on_delete=models.CASCADE, related_name="order_items")
     quantity = models.PositiveSmallIntegerField(
         default=1, validators=[MinValueValidator(1)]
     )

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Address
+from .models import Address, Meal
 
 
 class AddressSerializer(serializers.ModelSerializer):
@@ -13,6 +13,14 @@ class AddressSerializer(serializers.ModelSerializer):
             "city",
             "postal_code",
         )
-        read_only_fields = [  # noqa: RUF012
-            "id"
-        ]
+        read_only_fields = ("id",)
+
+
+class MealSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Meal
+        fields = (
+            "id",
+            "name",
+        )
+        read_only_fields = ("id",)

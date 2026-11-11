@@ -1,7 +1,7 @@
 import type { Order } from "../types/Order";
 
 export const getOrders = async (): Promise<Order[]> => {
-	const response = await fetch("/api/orders");
+	const response = await fetch("/api/orders/");
 
 	if (!response.ok) {
 		throw new Error("Could not load data: orders");
