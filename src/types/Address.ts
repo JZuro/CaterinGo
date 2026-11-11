@@ -3,5 +3,5 @@ export type Address = {
 	street: string;
 	apartment: string;
 	city: string;
-	postalCode: string;
+	postal_code: string;
 };

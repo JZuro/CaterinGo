@@ -41,7 +41,7 @@ const Addresses = () => {
 									<td>{address.street}</td>
 									<td>{address.apartment}</td>
 									<td>{address.city}</td>
-									<td>{address.postalCode}</td>
+									<td>{address.postal_code}</td>
 									<td className="actions-column">
 										<button
 											className="btn btn-circle btn-text btn-sm"
