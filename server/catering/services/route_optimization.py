@@ -2,6 +2,7 @@ from itertools import permutations
 from math import inf
 
 from django.conf import settings
+from django.contrib.auth.models import AbstractUser
 
 from ..models import Address, Order, Route
 from .routing import Coordinate, RoadMatrix, get_road_matrix
@@ -100,12 +101,16 @@ def _address_snapshot(
     }
 
 
-def optimize_route(start_address: Address, end_address: Address) -> Route:
+def optimize_route(
+    start_address: Address,
+    end_address: Address,
+    user: AbstractUser,
+) -> Route:
     orders_by_address: dict[int, list[int]] = {}
     delivery_addresses: dict[int, Address] = {}
 
     pending_orders = (
-        Order.objects.filter(status=Order.Status.PENDING)
+        Order.objects.filter(user=user, status=Order.Status.PENDING)
         .select_related("address")
         .order_by("id")
     )
@@ -167,6 +172,7 @@ def optimize_route(start_address: Address, end_address: Address) -> Route:
         raise RouteOptimizationError("No drivable route connects all stops")
 
     return Route.objects.create(
+        user=user,
         start=stops[0],
         end=stops[-1],
         stops=stops,

@@ -188,6 +188,13 @@ h2 {
     font-size: 20px;
   }
 }
+
+.auth-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.875rem;
+  letter-spacing: -0.03em;
+}
+
 p {
   margin: 0;
 }

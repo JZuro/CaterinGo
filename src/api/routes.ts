@@ -2,6 +2,7 @@ import type {
 	OptimizedRoute,
 	RouteOptimizationInput,
 } from "../types/Route";
+import { apiFetch } from "./client";
 
 const getErrorMessage = async (response: Response) => {
 	try {
@@ -13,7 +14,7 @@ const getErrorMessage = async (response: Response) => {
 };
 
 export const getCurrentRoute = async (): Promise<OptimizedRoute | null> => {
-	const response = await fetch("/api/routes/current/");
+	const response = await apiFetch("/api/routes/current/");
 
 	if (response.status === 404) {
 		return null;
@@ -29,7 +30,7 @@ export const getCurrentRoute = async (): Promise<OptimizedRoute | null> => {
 export const optimizeRoute = async (
 	input: RouteOptimizationInput,
 ): Promise<OptimizedRoute> => {
-	const response = await fetch("/api/routes/optimize/", {
+	const response = await apiFetch("/api/routes/optimize/", {
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",

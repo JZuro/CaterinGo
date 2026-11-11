@@ -1,7 +1,8 @@
 import type { Meal, MealInput } from "../types/Meal";
+import { apiFetch } from "./client";
 
 export const getMeals = async (): Promise<Meal[]> => {
-	const response = await fetch("/api/meals/");
+	const response = await apiFetch("/api/meals/");
 
 	if (!response.ok) {
 		throw new Error("Could not load data: meals");
@@ -11,7 +12,7 @@ export const getMeals = async (): Promise<Meal[]> => {
 };
 
 export const createMeal = async (meal: MealInput): Promise<Meal> => {
-	const response = await fetch("/api/meals/", {
+	const response = await apiFetch("/api/meals/", {
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
@@ -30,7 +31,7 @@ export const updateMeal = async (
 	id: number,
 	meal: MealInput
 ): Promise<Meal> => {
-	const response = await fetch(`/api/meals/${id}/`, {
+	const response = await apiFetch(`/api/meals/${id}/`, {
 		method: "PATCH",
 		headers: {
 			"Content-Type": "application/json",
@@ -46,7 +47,7 @@ export const updateMeal = async (
 };
 
 export const deleteMeal = async (id: number): Promise<void> => {
-	const response = await fetch(`/api/meals/${id}/`, {
+	const response = await apiFetch(`/api/meals/${id}/`, {
 		method: "DELETE",
 	});
 
