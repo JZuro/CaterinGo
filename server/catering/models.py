@@ -22,7 +22,7 @@ class Order(models.Model):
     id = models.BigAutoField(primary_key=True)
     address = models.ForeignKey(
         Address,
-        on_delete=models.PROTECT,
+        on_delete=models.CASCADE,
         related_name="orders",
     )
     status = models.CharField(
