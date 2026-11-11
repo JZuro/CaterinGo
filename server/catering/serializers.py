@@ -1,7 +1,7 @@
 from django.db import transaction
 from rest_framework import serializers
 
-from .models import Address, Meal, Order, OrderItem
+from .models import Address, Meal, Order, OrderItem, Route
 from .services.geocoding import geocode_address
 
 
@@ -140,3 +140,50 @@ class OrderSerializer(serializers.ModelSerializer):
                 )
 
         return order
+
+
+class RouteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Route
+        fields = (
+            "id",
+            "created_at",
+            "start",
+            "end",
+            "stops",
+            "distance_meters",
+            "duration_seconds",
+        )
+        read_only_fields = fields
+
+
+class RouteOptimizationRequestSerializer(serializers.Serializer):
+    start_address_id = serializers.PrimaryKeyRelatedField(
+        queryset=Address.objects.all(),
+        source="start_address",
+    )
+    end_address_id = serializers.PrimaryKeyRelatedField(
+        queryset=Address.objects.all(),
+        source="end_address",
+    )
+
+    def validate(self, attrs):
+        missing_coordinates = [
+            input_field
+            for input_field, source_field in (
+                ("start_address_id", "start_address"),
+                ("end_address_id", "end_address"),
+            )
+            if attrs[source_field].latitude is None
+            or attrs[source_field].longitude is None
+        ]
+
+        if missing_coordinates:
+            raise serializers.ValidationError(
+                {
+                    field: "This address has no coordinates."
+                    for field in missing_coordinates
+                }
+            )
+
+        return attrs

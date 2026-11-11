@@ -74,3 +74,16 @@ class OrderItem(models.Model):
 
     def __str__(self) -> str:
         return f"{self.order}: {self.meal} × {self.quantity}"
+
+
+class Route(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    start = models.JSONField()
+    end = models.JSONField()
+    stops = models.JSONField()
+    distance_meters = models.PositiveIntegerField()
+    duration_seconds = models.PositiveIntegerField()
+
+    def __str__(self) -> str:
+        return f"Route #{self.id} created at {self.created_at}"

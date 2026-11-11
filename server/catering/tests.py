@@ -8,7 +8,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from .models import Address, Meal, Order, OrderItem
+from .models import Address, Meal, Order, OrderItem, Route
 from .services.geocoding import Coordinates, geocode_address
 
 
@@ -498,3 +498,109 @@ class OrderAPITests(APITestCase):
         self.assertFalse(OrderItem.objects.filter(pk=order_item_pk).exists())
         self.assertTrue(Address.objects.filter(id=address_id).exists())
         self.assertTrue(Meal.objects.filter(id=meal_id).exists())
+
+
+class RouteAPITests(APITestCase):
+    def setUp(self):
+        self.current_url = reverse("current-route")
+        self.optimize_url = reverse("optimize-route")
+        self.start_address = Address.objects.create(
+            street="ul. Startowa 1",
+            city="Warszawa",
+            postal_code="00-001",
+            latitude=Decimal("52.229676"),
+            longitude=Decimal("21.012229"),
+        )
+        self.end_address = Address.objects.create(
+            street="ul. Końcowa 10",
+            city="Warszawa",
+            postal_code="00-950",
+            latitude=Decimal("52.249676"),
+            longitude=Decimal("21.032229"),
+        )
+
+    def create_route(self, order_ids=None):
+        return Route.objects.create(
+            start={
+                "address_id": self.start_address.id,
+                "label": "ul. Startowa 1, 00-001 Warszawa",
+                "latitude": "52.229676",
+                "longitude": "21.012229",
+            },
+            end={
+                "address_id": self.end_address.id,
+                "label": "ul. Końcowa 10, 00-950 Warszawa",
+                "latitude": "52.249676",
+                "longitude": "21.032229",
+            },
+            stops=[
+                {
+                    "position": 1,
+                    "address_id": self.end_address.id,
+                    "label": "ul. Końcowa 10, 00-950 Warszawa",
+                    "latitude": "52.249676",
+                    "longitude": "21.032229",
+                    "order_ids": order_ids or [],
+                }
+            ],
+            distance_meters=5200,
+            duration_seconds=900,
+        )
+
+    def test_current_route_returns_not_found_before_optimization(self):
+        response = self.client.get(self.current_url)
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_current_route_is_unchanged_when_order_status_changes(self):
+        order = Order.objects.create(
+            address=self.end_address,
+            status=Order.Status.PENDING,
+        )
+        route = self.create_route(order_ids=[order.id])
+        original_stops = route.stops
+
+        order.status = Order.Status.DELIVERED
+        order.save(update_fields=("status",))
+
+        response = self.client.get(self.current_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()["id"], route.id)
+        self.assertEqual(response.json()["stops"], original_stops)
+
+    def test_optimize_route_requires_geocoded_start_and_end(self):
+        self.start_address.latitude = None
+        self.start_address.longitude = None
+        self.start_address.save(update_fields=("latitude", "longitude"))
+
+        response = self.client.post(
+            self.optimize_url,
+            {
+                "start_address_id": self.start_address.id,
+                "end_address_id": self.end_address.id,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("start_address_id", response.json())
+
+    def test_unavailable_optimizer_preserves_current_route(self):
+        route = self.create_route()
+
+        response = self.client.post(
+            self.optimize_url,
+            {
+                "start_address_id": self.start_address.id,
+                "end_address_id": self.end_address.id,
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+        self.assertEqual(Route.objects.count(), 1)
+        self.assertEqual(Route.objects.get(), route)
