@@ -1,4 +1,12 @@
+import type { Meal } from "./Meal";
+
 export type OrderItem = {
-	mealId: number;
+	id: number;
+	meal: Meal;
+	quantity: number;
+};
+
+export type OrderItemInput = {
+	meal_id: number;
 	quantity: number;
 };

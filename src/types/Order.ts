@@ -1,21 +1,17 @@
-export type OrderStatus = "pending" | "delivered" | "cancelled";
+import type { Address } from "./Address";
+import type { OrderItem, OrderItemInput } from "./OrderItem";
 
-export type OrderItem = {
-	meal: {
-		id: number;
-		name: string;
-	};
-	quantity: number;
-};
+export type OrderStatus = "pending" | "delivered" | "cancelled";
 
 export type Order = {
 	id: number;
 	status: OrderStatus;
-
-	address: {
-		id: number;
-		street: string;
-	};
-
+	address: Address;
 	items: OrderItem[];
+};
+
+export type OrderInput = {
+	status: OrderStatus;
+	address_id: number;
+	items: OrderItemInput[];
 };

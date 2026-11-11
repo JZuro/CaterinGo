@@ -100,6 +100,7 @@ class AddressAPITests(APITestCase):
         self.assertFalse(OrderItem.objects.filter(pk=order_item.pk).exists())
         self.assertTrue(Meal.objects.filter(id=meal.id).exists())
 
+
 class MealAPITests(APITestCase):
     def setUp(self):
         self.list_url = reverse("meal-list")
@@ -191,3 +192,203 @@ class MealAPITests(APITestCase):
         self.assertFalse(OrderItem.objects.filter(pk=order_item_pk).exists())
         self.assertTrue(Order.objects.filter(id=order_id).exists())
         self.assertTrue(Address.objects.filter(id=address_id).exists())
+
+
+class OrderAPITests(APITestCase):
+    def setUp(self):
+        self.list_url = reverse("order-list")
+        self.address = Address.objects.create(
+            street="ul. Świętojańska 15",
+            apartment="7",
+            city="Gdynia",
+            postal_code="81-368",
+        )
+        self.meal = Meal.objects.create(name="Dieta Wysokobiałkowa")
+        self.other_meal = Meal.objects.create(name="Low Carb")
+        self.order = Order.objects.create(
+            address=self.address,
+            status=Order.Status.PENDING,
+        )
+        self.order_item = OrderItem.objects.create(
+            order=self.order,
+            meal=self.meal,
+            quantity=2,
+        )
+
+    def test_list_orders(self):
+        response = self.client.get(self.list_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.json(),
+            [
+                {
+                    "id": self.order.id,
+                    "status": "pending",
+                    "address": {
+                        "id": self.address.id,
+                        "street": "ul. Świętojańska 15",
+                        "apartment": "7",
+                        "city": "Gdynia",
+                        "postal_code": "81-368",
+                    },
+                    "items": [
+                        {
+                            "id": self.order_item.pk,
+                            "meal": {
+                                "id": self.meal.id,
+                                "name": "Dieta Wysokobiałkowa",
+                            },
+                            "quantity": 2,
+                        }
+                    ],
+                }
+            ],
+        )
+
+    def test_create_order_with_items(self):
+        response = self.client.post(
+            self.list_url,
+            {
+                "status": "pending",
+                "address_id": self.address.id,
+                "items": [
+                    {
+                        "meal_id": self.meal.id,
+                        "quantity": 1,
+                    },
+                    {
+                        "meal_id": self.other_meal.id,
+                        "quantity": 3,
+                    },
+                ],
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        response_data = response.json()
+        created_order = Order.objects.get(id=response_data["id"])
+        self.assertEqual(created_order.address, self.address)
+        self.assertEqual(created_order.status, Order.Status.PENDING)
+        self.assertEqual(OrderItem.objects.filter(order=created_order).count(), 2)
+        self.assertNotIn("address_id", response_data)
+        self.assertNotIn("meal_id", response_data["items"][0])
+
+    def test_create_order_requires_at_least_one_item(self):
+        response = self.client.post(
+            self.list_url,
+            {
+                "status": "pending",
+                "address_id": self.address.id,
+                "items": [],
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("items", response.json())
+        self.assertEqual(Order.objects.count(), 1)
+
+    def test_create_order_rejects_duplicate_meals(self):
+        response = self.client.post(
+            self.list_url,
+            {
+                "status": "pending",
+                "address_id": self.address.id,
+                "items": [
+                    {
+                        "meal_id": self.meal.id,
+                        "quantity": 1,
+                    },
+                    {
+                        "meal_id": self.meal.id,
+                        "quantity": 2,
+                    },
+                ],
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("items", response.json())
+        self.assertEqual(Order.objects.count(), 1)
+
+    def test_create_order_rejects_quantity_below_one(self):
+        response = self.client.post(
+            self.list_url,
+            {
+                "status": "pending",
+                "address_id": self.address.id,
+                "items": [
+                    {
+                        "meal_id": self.meal.id,
+                        "quantity": 0,
+                    }
+                ],
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("items", response.json())
+        self.assertEqual(Order.objects.count(), 1)
+
+    def test_update_status_preserves_items(self):
+        detail_url = reverse("order-detail", args=[self.order.id])
+        order_item_pk = self.order_item.pk
+
+        response = self.client.patch(
+            detail_url,
+            {"status": "delivered"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, Order.Status.DELIVERED)
+        self.assertTrue(OrderItem.objects.filter(pk=order_item_pk).exists())
+
+    def test_update_order_replaces_items(self):
+        detail_url = reverse("order-detail", args=[self.order.id])
+        old_item_pk = self.order_item.pk
+
+        response = self.client.patch(
+            detail_url,
+            {
+                "items": [
+                    {
+                        "meal_id": self.other_meal.id,
+                        "quantity": 4,
+                    }
+                ]
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(OrderItem.objects.filter(pk=old_item_pk).exists())
+
+        updated_items = OrderItem.objects.filter(order=self.order)
+        self.assertEqual(updated_items.count(), 1)
+
+        updated_item = updated_items.get()
+        self.assertEqual(updated_item.meal, self.other_meal)
+        self.assertEqual(updated_item.quantity, 4)
+
+    def test_delete_order_cascades_to_items(self):
+        detail_url = reverse("order-detail", args=[self.order.id])
+        order_id = self.order.id
+        order_item_pk = self.order_item.pk
+        address_id = self.address.id
+        meal_id = self.meal.id
+
+        response = self.client.delete(detail_url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Order.objects.filter(id=order_id).exists())
+        self.assertFalse(OrderItem.objects.filter(pk=order_item_pk).exists())
+        self.assertTrue(Address.objects.filter(id=address_id).exists())
+        self.assertTrue(Meal.objects.filter(id=meal_id).exists())

@@ -1,4 +1,4 @@
-import type { Order } from "../types/Order";
+import type { Order, OrderInput } from "../types/Order";
 
 export const getOrders = async (): Promise<Order[]> => {
 	const response = await fetch("/api/orders/");
@@ -8,4 +8,49 @@ export const getOrders = async (): Promise<Order[]> => {
 	}
 
 	return response.json() as Promise<Order[]>;
+};
+
+export const createOrder = async (order: OrderInput): Promise<Order> => {
+	const response = await fetch("/api/orders/", {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify(order),
+	});
+
+	if (!response.ok) {
+		throw new Error("Could not create order");
+	}
+
+	return response.json() as Promise<Order>;
+};
+
+export const updateOrder = async (
+	id: number,
+	order: OrderInput,
+): Promise<Order> => {
+	const response = await fetch(`/api/orders/${id}/`, {
+		method: "PATCH",
+		headers: {
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify(order),
+	});
+
+	if (!response.ok) {
+		throw new Error("Could not update order");
+	}
+
+	return response.json() as Promise<Order>;
+};
+
+export const deleteOrder = async (id: number): Promise<void> => {
+	const response = await fetch(`/api/orders/${id}/`, {
+		method: "DELETE",
+	});
+
+	if (!response.ok) {
+		throw new Error("Could not delete order");
+	}
 };
