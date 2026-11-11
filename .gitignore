@@ -27,3 +27,8 @@ dist-ssr
 server/.venv/
 server/db.sqlite3
 server/.env
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
