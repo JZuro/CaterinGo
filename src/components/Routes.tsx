@@ -1,6 +1,11 @@
-import { useEffect, useState, type SubmitEvent } from "react";
-import { getAddresses } from "../api/addresses";
-import { getCurrentRoute, optimizeRoute } from "../api/routes";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState, type SubmitEvent } from "react";
+import {
+	addressesQuery,
+	currentRouteQuery,
+	queryKeys,
+} from "../api/queries";
+import { optimizeRoute } from "../api/routes";
 import type { Address } from "../types/Address";
 import type { OptimizedRoute, RouteStopKind } from "../types/Route";
 
@@ -35,68 +40,92 @@ const formatDuration = (seconds: number) => {
 	return hours > 0 ? `${hours} h ${remainingMinutes} min` : `${minutes} min`;
 };
 
+const escapeCsvCell = (value: string | number) =>
+	`"${String(value).replaceAll('"', '""')}"`;
+
+const downloadRouteCsv = (route: OptimizedRoute) => {
+	const rows = route.stops.map((stop) => [
+		stop.position + 1,
+		stop.kind,
+		stop.label,
+		(stop.order_items ?? [])
+			.map((item) => `${item.quantity} × ${item.meal_name}`)
+			.join("; "),
+		stop.latitude,
+		stop.longitude,
+	]);
+	const csv = [
+		["Stop", "Type", "Address", "Meals", "Latitude", "Longitude"],
+		...rows,
+	]
+		.map((row) => row.map(escapeCsvCell).join(","))
+		.join("\r\n");
+	const blob = new Blob(["\uFEFF", csv], {
+		type: "text/csv;charset=utf-8",
+	});
+	const url = URL.createObjectURL(blob);
+	const link = document.createElement("a");
+	const date = new Date(route.created_at).toISOString().slice(0, 10);
+
+	link.href = url;
+	link.download = `route-${route.id}-${date}.csv`;
+	document.body.append(link);
+	link.click();
+	link.remove();
+	URL.revokeObjectURL(url);
+};
+
+const getGoogleMapsUrl = (route: OptimizedRoute) => {
+	const stops = route.stops.map((stop) =>
+		encodeURIComponent(
+			`${stop.street}, ${stop.postal_code} ${stop.city}`,
+		).replaceAll("%20", "+"),
+	);
+
+	return `https://www.google.com/maps/dir/${stops.join("/")}/`;
+};
+
 const Routes = () => {
-	const [addresses, setAddresses] = useState<Address[]>([]);
-	const [route, setRoute] = useState<OptimizedRoute | null>(null);
+	const queryClient = useQueryClient();
+	const addressesResult = useQuery(addressesQuery);
+	const routeResult = useQuery(currentRouteQuery);
+	const addresses = addressesResult.data ?? [];
+	const route = routeResult.data ?? null;
+	const loading = addressesResult.isPending || routeResult.isPending;
+	const loadError = addressesResult.isError || routeResult.isError;
 	const [startAddressId, setStartAddressId] = useState(0);
 	const [endAddressId, setEndAddressId] = useState(0);
-	const [loading, setLoading] = useState(true);
 	const [optimizing, setOptimizing] = useState(false);
 	const [error, setError] = useState("");
-
-	useEffect(() => {
-		let cancelled = false;
-
-		const loadData = async () => {
-			try {
-				const [loadedAddresses, currentRoute] = await Promise.all([
-					getAddresses(),
-					getCurrentRoute(),
-				]);
-
-				if (cancelled) {
-					return;
-				}
-
-				const geocodedAddresses = loadedAddresses.filter(hasCoordinates);
-				const currentStart = geocodedAddresses.find(
-					(address) => address.id === currentRoute?.start.address_id,
-				);
-				const currentEnd = geocodedAddresses.find(
-					(address) => address.id === currentRoute?.end.address_id,
-				);
-
-				setAddresses(loadedAddresses);
-				setRoute(currentRoute);
-				setStartAddressId(
-					currentStart?.id ?? geocodedAddresses[0]?.id ?? 0,
-				);
-				setEndAddressId(
-					currentEnd?.id ?? geocodedAddresses.at(-1)?.id ?? 0,
-				);
-			} catch {
-				if (!cancelled) {
-					setError("Could not load route data");
-				}
-			} finally {
-				if (!cancelled) {
-					setLoading(false);
-				}
-			}
-		};
-
-		void loadData();
-
-		return () => {
-			cancelled = true;
-		};
-	}, []);
+	const geocodedAddresses = addresses.filter(hasCoordinates);
+	const defaultStartAddressId =
+		geocodedAddresses.find(
+			(address) => address.id === route?.start.address_id,
+		)?.id ??
+		geocodedAddresses[0]?.id ??
+		0;
+	const defaultEndAddressId =
+		geocodedAddresses.find(
+			(address) => address.id === route?.end.address_id,
+		)?.id ??
+		geocodedAddresses.at(-1)?.id ??
+		0;
+	const selectedStartAddressId = geocodedAddresses.some(
+		(address) => address.id === startAddressId,
+	)
+		? startAddressId
+		: defaultStartAddressId;
+	const selectedEndAddressId = geocodedAddresses.some(
+		(address) => address.id === endAddressId,
+	)
+		? endAddressId
+		: defaultEndAddressId;
 
 	const handleOptimize = async (event: SubmitEvent<HTMLFormElement>) => {
 		event.preventDefault();
 		setError("");
 
-		if (startAddressId === 0 || endAddressId === 0) {
+		if (selectedStartAddressId === 0 || selectedEndAddressId === 0) {
 			setError("Select a start and end address");
 			return;
 		}
@@ -105,10 +134,10 @@ const Routes = () => {
 
 		try {
 			const optimizedRoute = await optimizeRoute({
-				start_address_id: startAddressId,
-				end_address_id: endAddressId,
+				start_address_id: selectedStartAddressId,
+				end_address_id: selectedEndAddressId,
 			});
-			setRoute(optimizedRoute);
+			queryClient.setQueryData(queryKeys.currentRoute, optimizedRoute);
 		} catch (caughtError) {
 			setError(
 				caughtError instanceof Error
@@ -143,7 +172,7 @@ const Routes = () => {
 							<select
 								id="route-start"
 								className="select w-full"
-								value={startAddressId}
+								value={selectedStartAddressId}
 								onChange={(event) =>
 									setStartAddressId(Number(event.target.value))
 								}
@@ -170,7 +199,7 @@ const Routes = () => {
 							<select
 								id="route-end"
 								className="select w-full"
-								value={endAddressId}
+								value={selectedEndAddressId}
 								onChange={(event) =>
 									setEndAddressId(Number(event.target.value))
 								}
@@ -204,7 +233,11 @@ const Routes = () => {
 							No addresses have GPS coordinates yet.
 						</p>
 					)}
-					{error && <p className="text-error mt-3 text-sm">{error}</p>}
+					{(error || loadError) && (
+						<p className="text-error mt-3 text-sm">
+							{error || "Could not load route data"}
+						</p>
+					)}
 				</div>
 			</section>
 
@@ -220,13 +253,32 @@ const Routes = () => {
 									Created {new Date(route.created_at).toLocaleString()}
 								</p>
 							</div>
-							<div className="flex gap-2">
-								<span className="badge badge-soft badge-primary">
-									{formatDistance(route.distance_meters)}
-								</span>
-								<span className="badge badge-soft badge-info">
-									{formatDuration(route.duration_seconds)}
-								</span>
+							<div className="flex flex-col items-end gap-2">
+								<div className="flex gap-2">
+									<span className="badge badge-soft badge-primary">
+										{formatDistance(route.distance_meters)}
+									</span>
+									<span className="badge badge-soft badge-info">
+										{formatDuration(route.duration_seconds)}
+									</span>
+								</div>
+								<div className="flex flex-wrap justify-end gap-2">
+									<button
+										type="button"
+										className="btn btn-sm btn-outline"
+										onClick={() => downloadRouteCsv(route)}
+									>
+										Download CSV
+									</button>
+									<a
+										className="btn btn-sm btn-primary"
+										href={getGoogleMapsUrl(route)}
+										target="_blank"
+										rel="noreferrer"
+									>
+										Open in Google Maps
+									</a>
+								</div>
 							</div>
 						</div>
 
@@ -243,10 +295,14 @@ const Routes = () => {
 										<p className="text-base-content font-medium">
 											{stop.label}
 										</p>
-										{stop.order_ids.length > 0 && (
-											<p className="text-sm">
-												Orders: {stop.order_ids.join(", ")}
-											</p>
+										{stop.order_items && stop.order_items.length > 0 && (
+											<ul className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm">
+												{stop.order_items.map((item) => (
+													<li key={item.meal_name}>
+														{item.quantity} × {item.meal_name}
+													</li>
+												))}
+											</ul>
 										)}
 									</div>
 									<span

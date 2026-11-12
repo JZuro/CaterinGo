@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
 	getCurrentUser,
 	login as requestLogin,
@@ -14,11 +15,15 @@ import type { LoginInput, SignupInput, User } from "../types/Auth";
 import { AuthContext } from "./authContext";
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
+	const queryClient = useQueryClient();
 	const [user, setUser] = useState<User | null>(null);
 	const [loading, setLoading] = useState(true);
 
 	useEffect(() => {
-		const clearSession = () => setUser(null);
+		const clearSession = () => {
+			queryClient.clear();
+			setUser(null);
+		};
 		window.addEventListener("auth:unauthorized", clearSession);
 
 		const restoreSession = async () => {
@@ -39,9 +44,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 		void restoreSession();
 
 		return () => window.removeEventListener("auth:unauthorized", clearSession);
-	}, []);
+	}, [queryClient]);
 
 	const applyAuthentication = (token: string, authenticatedUser: User) => {
+		queryClient.clear();
 		storeToken(token);
 		setUser(authenticatedUser);
 	};
@@ -61,6 +67,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 			await requestLogout();
 		} finally {
 			clearStoredToken();
+			queryClient.clear();
 			setUser(null);
 		}
 	};

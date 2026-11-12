@@ -919,6 +919,10 @@ class RouteAPITests(AuthenticatedAPITestCase):
             user=self.user,
             address=second_delivery,
         )
+        meal = Meal.objects.create(user=self.user, name="Dieta testowa")
+        OrderItem.objects.create(order=first_order, meal=meal, quantity=1)
+        OrderItem.objects.create(order=second_order, meal=meal, quantity=2)
+        OrderItem.objects.create(order=third_order, meal=meal, quantity=3)
         Order.objects.create(
             user=self.user,
             address=skipped_address,
@@ -968,6 +972,14 @@ class RouteAPITests(AuthenticatedAPITestCase):
         )
         self.assertEqual(stops[1]["order_ids"], [second_order.id, third_order.id])
         self.assertEqual(stops[2]["order_ids"], [first_order.id])
+        self.assertEqual(
+            stops[1]["order_items"],
+            [{"meal_name": meal.name, "quantity": 5}],
+        )
+        self.assertEqual(
+            stops[2]["order_items"],
+            [{"meal_name": meal.name, "quantity": 1}],
+        )
         self.assertFalse(
             any(stop["address_id"] == skipped_address.id for stop in stops)
         )
