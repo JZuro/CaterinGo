@@ -80,13 +80,21 @@ def _nearest_neighbour_path(matrix: RoadMatrix) -> tuple[int, ...]:
 
 def _address_snapshot(
     address: Address,
-    order_ids: list[int],
+    orders: list[Order],
 ) -> dict[str, object]:
     street = (
         f"{address.street} {address.apartment}"
         if address.apartment
         else address.street
     )
+
+    quantities_by_meal: dict[str, int] = {}
+    for order in orders:
+        for item in order.items.all():
+            meal_name = item.meal.name
+            quantities_by_meal[meal_name] = (
+                quantities_by_meal.get(meal_name, 0) + item.quantity
+            )
 
     return {
         "address_id": address.id,
@@ -97,7 +105,11 @@ def _address_snapshot(
         "postal_code": address.postal_code,
         "latitude": str(address.latitude),
         "longitude": str(address.longitude),
-        "order_ids": order_ids,
+        "order_ids": [order.id for order in orders],
+        "order_items": [
+            {"meal_name": meal_name, "quantity": quantity}
+            for meal_name, quantity in quantities_by_meal.items()
+        ],
     }
 
 
@@ -106,17 +118,18 @@ def optimize_route(
     end_address: Address,
     user: AbstractUser,
 ) -> Route:
-    orders_by_address: dict[int, list[int]] = {}
+    orders_by_address: dict[int, list[Order]] = {}
     delivery_addresses: dict[int, Address] = {}
 
     pending_orders = (
         Order.objects.filter(user=user, status=Order.Status.PENDING)
         .select_related("address")
+        .prefetch_related("items__meal")
         .order_by("id")
     )
 
     for order in pending_orders:
-        orders_by_address.setdefault(order.address_id, []).append(order.id)
+        orders_by_address.setdefault(order.address_id, []).append(order)
         delivery_addresses[order.address_id] = order.address
 
     delivery_addresses.pop(start_address.id, None)

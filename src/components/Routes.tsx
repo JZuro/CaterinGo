@@ -243,10 +243,14 @@ const Routes = () => {
 										<p className="text-base-content font-medium">
 											{stop.label}
 										</p>
-										{stop.order_ids.length > 0 && (
-											<p className="text-sm">
-												Orders: {stop.order_ids.join(", ")}
-											</p>
+										{stop.order_items && stop.order_items.length > 0 && (
+											<ul className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm">
+												{stop.order_items.map((item) => (
+													<li key={item.meal_name}>
+														{item.quantity} × {item.meal_name}
+													</li>
+												))}
+											</ul>
 										)}
 									</div>
 									<span
