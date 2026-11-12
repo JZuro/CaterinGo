@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react";
-import { createMeal, deleteMeal, getMeals, updateMeal } from "../api/meals";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { createMeal, deleteMeal, updateMeal } from "../api/meals";
+import { mealsQuery, queryKeys } from "../api/queries";
 import type { Meal, MealInput } from "../types/Meal";
 import MealForm from "./MealForm";
 import { useConfirm } from "./ConfirmContext";
@@ -12,23 +14,20 @@ const toMealInput = (meal: Meal): MealInput => ({
 
 const Meals = () => {
 	const confirm = useConfirm();
-	const [meals, setMeals] = useState<Meal[]>([]);
-	const [error, setError] = useState("");
+	const queryClient = useQueryClient();
+	const { data: meals = [], isPending, isError } = useQuery(mealsQuery);
 	const [formState, setFormState] = useState<MealFormState>(null);
 	const [searchQuery, setSearchQuery] = useState("");
 	const [actionError, setActionError] = useState("");
 	const [deletingId, setDeletingId] = useState<number | null>(null);
 
-	useEffect(() => {
-		getMeals()
-			.then(setMeals)
-			.catch(() => setError("Could not load data: meals"));
-	}, []);
-
 	const handleCreate = async (values: MealInput) => {
 		const createdMeal = await createMeal(values);
 
-		setMeals((current) => [...current, createdMeal]);
+		queryClient.setQueryData<Meal[]>(queryKeys.meals, (current = []) => [
+			...current,
+			createdMeal,
+		]);
 		setFormState(null);
 	};
 
@@ -50,9 +49,14 @@ const Meals = () => {
 		try {
 			await deleteMeal(meal.id);
 
-			setMeals((current) =>
-				current.filter((item) => item.id !== meal.id)
+			queryClient.setQueryData<Meal[]>(
+				queryKeys.meals,
+				(current = []) => current.filter((item) => item.id !== meal.id),
 			);
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.orders,
+				refetchType: "all",
+			});
 			setFormState((current) =>
 				current?.mode === "edit" && current.meal.id === meal.id
 					? null
@@ -72,11 +76,17 @@ const Meals = () => {
 
 		const updatedMeal = await updateMeal(formState.meal.id, values);
 
-		setMeals((current) =>
-			current.map((meal) =>
-				meal.id === updatedMeal.id ? updatedMeal : meal
-			)
+		queryClient.setQueryData<Meal[]>(
+			queryKeys.meals,
+			(current = []) =>
+				current.map((meal) =>
+					meal.id === updatedMeal.id ? updatedMeal : meal,
+				),
 		);
+		void queryClient.invalidateQueries({
+			queryKey: queryKeys.orders,
+			refetchType: "all",
+		});
 
 		setFormState(null);
 	};
@@ -88,8 +98,12 @@ const Meals = () => {
 			)
 		: meals;
 
-	if (error) {
-		return <p>{error}</p>;
+	if (isPending) {
+		return <p className="p-4">Loading meals...</p>;
+	}
+
+	if (isError) {
+		return <p className="p-4">Could not load data: meals</p>;
 	}
 
 	return (
