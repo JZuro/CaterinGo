@@ -124,6 +124,11 @@ def assign_existing_data_to_demo(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
+    # The data migration creates and updates rows before the user foreign keys
+    # become non-nullable. PostgreSQL must commit those writes before altering
+    # the related tables, otherwise their constraint triggers are still pending.
+    atomic = False
+
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
         ("catering", "0007_route"),
