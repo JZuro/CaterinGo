@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: cateringo
+    runtime: docker
+    region: frankfurt
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: cateringo-db
+          property: connectionString
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_DEBUG
+        value: "False"
+      - key: DJANGO_HTTPS
+        value: "True"
+      - key: DJANGO_HSTS_SECONDS
+        value: "300"
+      - key: NOMINATIM_USER_AGENT
+        sync: false
+      - key: OSRM_USER_AGENT
+        value: CaterinGo/1.0
+    healthCheckPath: /api/health/
+
+databases:
+  - name: cateringo-db
+    region: frankfurt

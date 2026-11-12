@@ -21,6 +21,19 @@ from .services.routing import (
 User = get_user_model()
 
 
+class DeploymentRoutingTests(SimpleTestCase):
+    def test_health_check(self):
+        response = self.client.get(reverse("health-check"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), {"status": "ok"})
+
+    def test_unknown_api_path_is_not_handled_by_react(self):
+        response = self.client.get("/api/not-a-real-endpoint/")
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
 class AuthenticatedAPITestCase(APITestCase):
     def setUp(self):
         super().setUp()
