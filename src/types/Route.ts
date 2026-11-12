@@ -1,5 +1,10 @@
 export type RouteStopKind = "start" | "delivery" | "end";
 
+export type RouteOrderItem = {
+	meal_name: string;
+	quantity: number;
+};
+
 export type RouteStop = {
 	position: number;
 	kind: RouteStopKind;
@@ -12,6 +17,7 @@ export type RouteStop = {
 	latitude: string;
 	longitude: string;
 	order_ids: number[];
+	order_items?: RouteOrderItem[];
 };
 
 export type OptimizedRoute = {

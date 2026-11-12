@@ -22,6 +22,20 @@ const toStop = (
 	if (!address || !address.latitude || !address.longitude) {
 		throw new Error("Mock address has no coordinates");
 	}
+	const orders = orderData.filter(
+		(order) =>
+			order.status === "pending" && order.address.id === address.id,
+	);
+	const quantitiesByMeal = new Map<string, number>();
+
+	for (const order of orders) {
+		for (const item of order.items) {
+			quantitiesByMeal.set(
+				item.meal.name,
+				(quantitiesByMeal.get(item.meal.name) ?? 0) + item.quantity,
+			);
+		}
+	}
 
 	return {
 		...address,
@@ -37,12 +51,11 @@ const toStop = (
 		]
 			.filter(Boolean)
 			.join(", "),
-		order_ids: orderData
-			.filter(
-				(order) =>
-					order.status === "pending" && order.address.id === address.id,
-			)
-			.map((order) => order.id),
+		order_ids: orders.map((order) => order.id),
+		order_items: Array.from(quantitiesByMeal, ([meal_name, quantity]) => ({
+			meal_name,
+			quantity,
+		})),
 	};
 };
 
