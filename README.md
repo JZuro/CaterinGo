@@ -68,23 +68,34 @@ python server/manage.py runserver
 Vite serves the site at `http://127.0.0.1:5173` and proxies `/api/` requests to
 Django at `http://127.0.0.1:8000`.
 
-## Deployment
+## Railway deployment
 
 The repository contains a multi-stage `Dockerfile` that builds the React app
-and serves it together with Django from one Gunicorn process. `render.yaml`
-defines the web service and its PostgreSQL database for a Render Blueprint.
+and serves it together with Django from one Gunicorn process. Railway detects
+the Dockerfile automatically.
 
-To deploy:
+1. Create a Railway project from this GitHub repository.
+2. In the same project, select **New → Database → PostgreSQL**.
+3. Add these variables to the application service:
 
-1. Push the repository to GitHub or GitLab.
-2. In Render, create a new Blueprint and select the repository.
-3. Enter an identifying Nominatim user agent when prompted, for example
-   `CaterinGo/1.0 (contact: you@example.com)`.
-4. Create the Blueprint and wait for `/api/health/` to report a successful
-   deployment.
+   ```text
+   DATABASE_URL=${{Postgres.DATABASE_URL}}
+   DJANGO_SECRET_KEY=<a long random value>
+   DJANGO_DEBUG=False
+   DJANGO_HTTPS=True
+   DJANGO_HSTS_SECONDS=300
+   NOMINATIM_USER_AGENT=CaterinGo/1.0 (contact: you@example.com)
+   OSRM_USER_AGENT=CaterinGo/1.0
+   ```
 
-Render generates the Django secret key, supplies the database URL, runs the
-migrations, and enables HTTPS through the variables declared in `render.yaml`.
+4. Under the application service's deployment settings, set the health-check
+   path to `/api/health/`.
+5. Under **Settings → Networking**, generate a Railway domain.
+
+The `DATABASE_URL` reference uses Railway's private network and stays in sync
+with the PostgreSQL service. Railway supplies `PORT`; the container runs the
+migrations and then starts Gunicorn on that port.
+
 The public Nominatim and OSRM endpoints are suitable for this small demo but
 should be replaced with hosted services before using the app for real delivery
 operations.

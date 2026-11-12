@@ -35,22 +35,22 @@ if not SECRET_KEY:
         )
     SECRET_KEY = "django-insecure-development-only"
 
-# Render terminates HTTPS before forwarding requests to Gunicorn.
+# Railway terminates HTTPS before forwarding requests to Gunicorn.
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # Keep HTTPS opt-in separate from DEBUG. This allows a production-like Docker
-# container to run over plain HTTP locally while Render enables HTTPS below.
+# container to run over plain HTTP locally while Railway enables HTTPS.
 HTTPS_ENABLED = os.getenv("DJANGO_HTTPS", "False").lower() == "true"
 SECURE_SSL_REDIRECT = HTTPS_ENABLED
+SECURE_REDIRECT_EXEMPT = [r"^api/health/$"]
 SESSION_COOKIE_SECURE = HTTPS_ENABLED
 CSRF_COOKIE_SECURE = HTTPS_ENABLED
 SECURE_HSTS_SECONDS = int(os.getenv("DJANGO_HSTS_SECONDS", "0"))
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "healthcheck.railway.app"]
 
 platform_hosts = [
     os.getenv("RAILWAY_PUBLIC_DOMAIN"),
-    os.getenv("RENDER_EXTERNAL_HOSTNAME"),
 ]
 
 additional_hosts = os.getenv("DJANGO_ALLOWED_HOSTS", "").split(",")
