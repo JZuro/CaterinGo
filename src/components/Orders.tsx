@@ -1,14 +1,16 @@
-import { useEffect, useState } from "react";
-import { getAddresses } from "../api/addresses";
-import { getMeals } from "../api/meals";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import {
 	createOrder,
 	deleteOrder,
-	getOrders,
 	updateOrder,
 } from "../api/orders";
-import type { Address } from "../types/Address";
-import type { Meal } from "../types/Meal";
+import {
+	addressesQuery,
+	mealsQuery,
+	ordersQuery,
+	queryKeys,
+} from "../api/queries";
 import type { Order, OrderInput, OrderStatus } from "../types/Order";
 import { useConfirm } from "./ConfirmContext";
 import OrderForm from "./OrderForm";
@@ -37,52 +39,31 @@ const toOrderInput = (order: Order): OrderInput => ({
 
 const Orders = () => {
 	const confirm = useConfirm();
-	const [orders, setOrders] = useState<Order[]>([]);
-	const [addresses, setAddresses] = useState<Address[]>([]);
-	const [meals, setMeals] = useState<Meal[]>([]);
-	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState("");
+	const queryClient = useQueryClient();
+	const ordersResult = useQuery(ordersQuery);
+	const addressesResult = useQuery(addressesQuery);
+	const mealsResult = useQuery(mealsQuery);
+	const orders = ordersResult.data ?? [];
+	const addresses = addressesResult.data ?? [];
+	const meals = mealsResult.data ?? [];
+	const loading =
+		ordersResult.isPending ||
+		addressesResult.isPending ||
+		mealsResult.isPending;
+	const loadError =
+		ordersResult.isError || addressesResult.isError || mealsResult.isError;
 	const [actionError, setActionError] = useState("");
 	const [formState, setFormState] = useState<OrderFormState>(null);
 	const [searchQuery, setSearchQuery] = useState("");
 	const [deletingId, setDeletingId] = useState<number | null>(null);
 
-	useEffect(() => {
-		let cancelled = false;
-
-		const loadData = async () => {
-			try {
-				const [loadedOrders, loadedAddresses, loadedMeals] =
-					await Promise.all([getOrders(), getAddresses(), getMeals()]);
-
-				if (!cancelled) {
-					setOrders(loadedOrders);
-					setAddresses(loadedAddresses);
-					setMeals(loadedMeals);
-					setError("");
-				}
-			} catch {
-				if (!cancelled) {
-					setError("Could not load order data");
-				}
-			} finally {
-				if (!cancelled) {
-					setLoading(false);
-				}
-			}
-		};
-
-		void loadData();
-
-		return () => {
-			cancelled = true;
-		};
-	}, []);
-
 	const handleCreate = async (values: OrderInput) => {
 		const createdOrder = await createOrder(values);
 
-		setOrders((current) => [...current, createdOrder]);
+		queryClient.setQueryData<Order[]>(queryKeys.orders, (current = []) => [
+			...current,
+			createdOrder,
+		]);
 		setFormState(null);
 	};
 
@@ -93,10 +74,12 @@ const Orders = () => {
 
 		const updatedOrder = await updateOrder(formState.order.id, values);
 
-		setOrders((current) =>
-			current.map((order) =>
-				order.id === updatedOrder.id ? updatedOrder : order
-			)
+		queryClient.setQueryData<Order[]>(
+			queryKeys.orders,
+			(current = []) =>
+				current.map((order) =>
+					order.id === updatedOrder.id ? updatedOrder : order,
+				),
 		);
 		setFormState(null);
 	};
@@ -108,10 +91,12 @@ const Orders = () => {
 
 		const updatedOrder = await updateOrder(formState.order.id, { status });
 
-		setOrders((current) =>
-			current.map((order) =>
-				order.id === updatedOrder.id ? updatedOrder : order
-			)
+		queryClient.setQueryData<Order[]>(
+			queryKeys.orders,
+			(current = []) =>
+				current.map((order) =>
+					order.id === updatedOrder.id ? updatedOrder : order,
+				),
 		);
 		setFormState(null);
 	};
@@ -133,8 +118,9 @@ const Orders = () => {
 
 		try {
 			await deleteOrder(order.id);
-			setOrders((current) =>
-				current.filter((item) => item.id !== order.id)
+			queryClient.setQueryData<Order[]>(
+				queryKeys.orders,
+				(current = []) => current.filter((item) => item.id !== order.id),
 			);
 			setFormState((current) =>
 				current &&
@@ -171,8 +157,8 @@ const Orders = () => {
 		return <p>Loading orders...</p>;
 	}
 
-	if (error) {
-		return <p>{error}</p>;
+	if (loadError) {
+		return <p className="p-4">Could not load order data</p>;
 	}
 
 	return (

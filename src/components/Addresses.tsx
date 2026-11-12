@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import {
 	createAddress,
 	deleteAddress,
-	getAddresses,
 	updateAddress,
 } from "../api/addresses";
+import { addressesQuery, queryKeys } from "../api/queries";
 import type { Address, AddressInput } from "../types/Address";
 import AddressForm from "./AddressForm";
 import { useConfirm } from "./ConfirmContext";
@@ -31,23 +32,24 @@ const formatAddress = (address: Address) => {
 
 const Addresses = () => {
 	const confirm = useConfirm();
-	const [addresses, setAddresses] = useState<Address[]>([]);
-	const [error, setError] = useState("");
+	const queryClient = useQueryClient();
+	const {
+		data: addresses = [],
+		isPending,
+		isError,
+	} = useQuery(addressesQuery);
 	const [formState, setFormState] = useState<AddressFormState>(null);
 	const [searchQuery, setSearchQuery] = useState("");
 	const [actionError, setActionError] = useState("");
 	const [deletingId, setDeletingId] = useState<number | null>(null);
 
-	useEffect(() => {
-		getAddresses()
-			.then(setAddresses)
-			.catch(() => setError("Could not load data: addresses"));
-	}, []);
-
 	const handleCreate = async (values: AddressInput) => {
 		const createdAddress = await createAddress(values);
 
-		setAddresses((current) => [...current, createdAddress]);
+		queryClient.setQueryData<Address[]>(queryKeys.addresses, (current = []) => [
+			...current,
+			createdAddress,
+		]);
 		setFormState(null);
 	};
 
@@ -69,9 +71,15 @@ const Addresses = () => {
 		try {
 			await deleteAddress(address.id);
 
-			setAddresses((current) =>
-				current.filter((item) => item.id !== address.id)
+			queryClient.setQueryData<Address[]>(
+				queryKeys.addresses,
+				(current = []) =>
+					current.filter((item) => item.id !== address.id),
 			);
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.orders,
+				refetchType: "all",
+			});
 			setFormState((current) =>
 				current?.mode === "edit" && current.address.id === address.id
 					? null
@@ -94,11 +102,17 @@ const Addresses = () => {
 			values
 		);
 
-		setAddresses((current) =>
-			current.map((address) =>
-				address.id === updatedAddress.id ? updatedAddress : address
-			)
+		queryClient.setQueryData<Address[]>(
+			queryKeys.addresses,
+			(current = []) =>
+				current.map((address) =>
+					address.id === updatedAddress.id ? updatedAddress : address,
+				),
 		);
+		void queryClient.invalidateQueries({
+			queryKey: queryKeys.orders,
+			refetchType: "all",
+		});
 
 		setFormState(null);
 	};
@@ -115,8 +129,12 @@ const Addresses = () => {
 			)
 		: addresses;
 
-	if (error) {
-		return <p>{error}</p>;
+	if (isPending) {
+		return <p className="p-4">Loading addresses...</p>;
+	}
+
+	if (isError) {
+		return <p className="p-4">Could not load data: addresses</p>;
 	}
 
 	return (
