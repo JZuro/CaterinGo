@@ -53,6 +53,37 @@ const Addresses = () => {
 		setFormState(null);
 	};
 
+	const handleCreateMultiple = async (values: AddressInput[]) => {
+		const createdAddresses: Address[] = [];
+
+		for (const value of values) {
+			try {
+				createdAddresses.push(await createAddress(value));
+			} catch {
+				if (createdAddresses.length > 0) {
+					queryClient.setQueryData<Address[]>(
+						queryKeys.addresses,
+						(current = []) => [...current, ...createdAddresses],
+					);
+				}
+
+				if (createdAddresses.length === 0) {
+					throw new Error("Could not save the first address");
+				}
+
+				throw new Error(
+					`Added ${createdAddresses.length} of ${values.length} addresses. Remove the first ${createdAddresses.length} address lines before retrying.`,
+				);
+			}
+		}
+
+		queryClient.setQueryData<Address[]>(queryKeys.addresses, (current = []) => [
+			...current,
+			...createdAddresses,
+		]);
+		setFormState(null);
+	};
+
 	const handleDelete = async (address: Address) => {
 		const confirmed = await confirm({
 			title: "Delete address?",
@@ -191,6 +222,11 @@ const Addresses = () => {
 								formState.mode === "create"
 									? handleCreate
 									: handleUpdate
+							}
+							onSubmitMultiple={
+								formState.mode === "create"
+									? handleCreateMultiple
+									: undefined
 							}
 							onCancel={() => setFormState(null)}
 						/>
