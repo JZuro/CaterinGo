@@ -12,6 +12,7 @@ import {
 	queryKeys,
 } from "../api/queries";
 import type { Order, OrderInput, OrderStatus } from "../types/Order";
+import AddButton from "./AddButton";
 import { useConfirm } from "./ConfirmContext";
 import OrderForm from "./OrderForm";
 import OrderStatusForm from "./OrderStatusForm";
@@ -171,13 +172,10 @@ const Orders = () => {
 					value={searchQuery}
 					onChange={(event) => setSearchQuery(event.target.value)}
 				/>
-				<button
-					type="button"
-					className="btn btn-primary btn-sm"
+				<AddButton
+					label="Add order"
 					onClick={() => setFormState({ mode: "create" })}
-				>
-					+
-				</button>
+				/>
 			</div>
 
 			{actionError && (

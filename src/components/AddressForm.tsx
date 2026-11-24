@@ -86,7 +86,7 @@ const AddressForm = ({
 					</label>
 					<textarea
 						id="multiple-addresses"
-						className="textarea min-h-40 w-full"
+						className="textarea min-h-40 w-full resize-none"
 						placeholder="One address per line..."
 						value={multipleValues}
 						onChange={(event) =>

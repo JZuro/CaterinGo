@@ -3,6 +3,7 @@ import { useState } from "react";
 import { createMeal, deleteMeal, updateMeal } from "../api/meals";
 import { mealsQuery, queryKeys } from "../api/queries";
 import type { Meal, MealInput } from "../types/Meal";
+import AddButton from "./AddButton";
 import MealForm from "./MealForm";
 import { useConfirm } from "./ConfirmContext";
 
@@ -116,13 +117,10 @@ const Meals = () => {
 					value={searchQuery}
 					onChange={(event) => setSearchQuery(event.target.value)}
 				/>
-				<button
-					type="button"
-					className="btn btn-primary btn-sm"
+				<AddButton
+					label="Add meal"
 					onClick={() => setFormState({ mode: "create" })}
-				>
-					+
-				</button>
+				/>
 			</div>
 
 			{actionError && (

@@ -7,6 +7,7 @@ import {
 } from "../api/addresses";
 import { addressesQuery, queryKeys } from "../api/queries";
 import type { Address, AddressInput } from "../types/Address";
+import AddButton from "./AddButton";
 import AddressForm from "./AddressForm";
 import { useConfirm } from "./ConfirmContext";
 
@@ -178,13 +179,10 @@ const Addresses = () => {
 					value={searchQuery}
 					onChange={(event) => setSearchQuery(event.target.value)}
 				/>
-				<button
-					type="button"
-					className="btn btn-primary btn-sm"
+				<AddButton
+					label="Add address"
 					onClick={() => setFormState({ mode: "create" })}
-				>
-					+
-				</button>
+				/>
 			</div>
 
 			{actionError && (
@@ -278,7 +276,9 @@ const Addresses = () => {
 											type="button"
 											className="btn btn-circle btn-text btn-sm"
 											aria-label="Delete"
-											onClick={() => void handleDelete(address)}
+											onClick={() =>
+												void handleDelete(address)
+											}
 											disabled={deletingId === address.id}
 										>
 											<span className="icon-[tabler--trash] size-5" />
